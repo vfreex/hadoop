@@ -46,6 +46,11 @@ else
   yum -y install curl \
     && yum clean all \
     && rm -rf /var/cache/yum
+
+  # TODO(tflannag): Need to manually create a PNC build for 3.1.4
+  # once the CI fixes land. When backporting to previous released
+  # branches, we need to update this version to point to that PNC
+  # build that gets mirrored to brew.
   export RH_HADOOP_PATCH_VERSION=00002
   export HADOOP_VERSION=3.1.1
 
