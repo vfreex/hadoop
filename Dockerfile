@@ -130,4 +130,4 @@ USER 1002
 LABEL io.k8s.display-name="OpenShift Hadoop" \
       io.k8s.description="This is an image used by operator-metering to to install and run HDFS." \
       io.openshift.tags="openshift" \
-      maintainer="AOS Operator Metering <sd-operator-metering@redhat.com>"
+      maintainer="<metering-team@redhat.com>"
