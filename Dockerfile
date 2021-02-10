@@ -81,7 +81,7 @@ RUN chmod +x /usr/bin/tini
 
 ENV JAVA_HOME=/etc/alternatives/jre
 
-ENV HADOOP_VERSION 3.1.1
+ENV HADOOP_VERSION 3.1.4
 
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_LOG_DIR=$HADOOP_HOME/logs
@@ -130,4 +130,4 @@ USER 1002
 LABEL io.k8s.display-name="OpenShift Hadoop" \
       io.k8s.description="This is an image used by operator-metering to to install and run HDFS." \
       io.openshift.tags="openshift" \
-      maintainer="AOS Operator Metering <sd-operator-metering@redhat.com>"
+      maintainer="<metering-team@redhat.com>"

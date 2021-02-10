@@ -48,6 +48,7 @@ import org.apache.hadoop.http.JettyUtils;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.records.timeline.TimelineAbout;
+import org.apache.hadoop.yarn.api.records.timeline.TimelineHealth;
 import org.apache.hadoop.yarn.api.records.timelineservice.FlowActivityEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntity;
 import org.apache.hadoop.yarn.api.records.timelineservice.TimelineEntityType;
@@ -213,6 +214,38 @@ public class TimelineReaderWebServices {
       @Context HttpServletResponse res) {
     init(res);
     return TimelineUtils.createTimelineAbout("Timeline Reader API");
+  }
+
+  /**
+   * Health check REST end point.
+   *
+   * @param req Servlet request.
+   * @param res Servlet response.
+   *
+   * @return A {@link Response} object with HTTP status 200 OK if the service
+   *         is running.
+   *         Otherwise, a {@link Response} object with HTTP status 500 is
+   *         returned.
+   */
+  @GET
+  @Path("/health")
+  @Produces(MediaType.APPLICATION_JSON + "; " + JettyUtils.UTF_8)
+  public Response health(
+      @Context HttpServletRequest req,
+      @Context HttpServletResponse res
+  ) {
+    Response response;
+    TimelineHealth timelineHealth = this.getTimelineReaderManager().getHealthStatus();
+    if (timelineHealth.getHealthStatus()
+        .equals(TimelineHealth.TimelineHealthStatus.RUNNING)) {
+      response = Response.ok(timelineHealth).build();
+    } else {
+       LOG.info("Timeline services health check: timeline reader reported " +
+           "connection failure");
+       response = Response.serverError().entity(timelineHealth).build();
+    }
+
+    return response;
   }
 
   /**
@@ -3532,9 +3565,9 @@ public class TimelineReaderWebServices {
   static boolean checkAccess(TimelineReaderManager readerManager,
       UserGroupInformation ugi, String entityUser) {
     if (isDisplayEntityPerUserFilterEnabled(readerManager.getConfig())) {
-      if (ugi != null && !validateAuthUserWithEntityUser(readerManager, ugi,
+      if (!validateAuthUserWithEntityUser(readerManager, ugi,
           entityUser)) {
-        String userName = ugi.getShortUserName();
+        String userName = ugi == null ? null : ugi.getShortUserName();
         String msg = "User " + userName
             + " is not allowed to read TimelineService V2 data.";
         throw new ForbiddenException(msg);

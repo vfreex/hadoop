@@ -7,6 +7,8 @@ export PROMETHEUS_JMX_EXPORTER_OUT=/build/jmx_prometheus_javaagent.jar
 
 # $1=OPENSHIFT_CI=true means running in CI
 if [[ "$1" == "true" ]]; then
+  echo "CI build is running"
+
   yum -y install --setopt=skip_missing_names_on_install=False \
       curl \
       java-1.8.0-openjdk-devel \
@@ -46,6 +48,11 @@ else
   yum -y install curl \
     && yum clean all \
     && rm -rf /var/cache/yum
+
+  # TODO(tflannag): Need to manually create a PNC build for 3.1.4
+  # once the CI fixes land. When backporting to previous released
+  # branches, we need to update this version to point to that PNC
+  # build that gets mirrored to brew.
   export RH_HADOOP_PATCH_VERSION=00002
   export HADOOP_VERSION=3.1.1
 
