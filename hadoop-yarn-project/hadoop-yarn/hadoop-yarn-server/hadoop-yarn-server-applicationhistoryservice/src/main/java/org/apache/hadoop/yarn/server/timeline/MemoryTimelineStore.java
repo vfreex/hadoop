@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.timeline;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -60,15 +59,14 @@ public class MemoryTimelineStore extends KeyValueBasedTimelineStore {
     }
 
     @Override
-    public CloseableIterator<V>
+    public Iterator<V>
     valueSetIterator() {
-      return wrapClosableIterator(new TreeSet<>(internalMap.values())
-          .iterator());
+      return new TreeSet<>(internalMap.values()).iterator();
     }
 
     @Override
     @SuppressWarnings("unchecked")
-    public CloseableIterator<V> valueSetIterator(V minV) {
+    public Iterator<V> valueSetIterator(V minV) {
       if (minV instanceof Comparable) {
         TreeSet<V> tempTreeSet = new TreeSet<>();
         for (V value : internalMap.values()) {
@@ -76,37 +74,10 @@ public class MemoryTimelineStore extends KeyValueBasedTimelineStore {
             tempTreeSet.add(value);
           }
         }
-        return wrapClosableIterator(tempTreeSet.iterator());
+        return tempTreeSet.iterator();
       } else {
         return valueSetIterator();
       }
-    }
-
-    private CloseableIterator<V> wrapClosableIterator(
-        final Iterator<V> iterator) {
-      return new CloseableIterator<V>() {
-        private final Iterator<V> internalIterator = iterator;
-        @Override
-        public void close() throws IOException {
-          // Not implemented
-        }
-
-        @Override
-        public boolean hasNext() {
-          return internalIterator.hasNext();
-        }
-
-        @Override
-        public V next() {
-          return internalIterator.next();
-        }
-
-        @Override
-        public void remove() {
-          internalIterator.remove();
-        }
-      };
-
     }
   }
 

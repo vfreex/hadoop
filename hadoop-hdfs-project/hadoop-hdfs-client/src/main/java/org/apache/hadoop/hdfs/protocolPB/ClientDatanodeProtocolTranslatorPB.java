@@ -324,12 +324,10 @@ public class ClientDatanodeProtocolTranslatorPB implements
   public void triggerBlockReport(BlockReportOptions options)
       throws IOException {
     try {
-      TriggerBlockReportRequestProto.Builder builder = TriggerBlockReportRequestProto.newBuilder().
-          setIncremental(options.isIncremental());
-      if (options.getNamenodeAddr() != null) {
-        builder.setNnAddress(NetUtils.getHostPortString(options.getNamenodeAddr()));
-      }
-      rpcProxy.triggerBlockReport(NULL_CONTROLLER, builder.build());
+      rpcProxy.triggerBlockReport(NULL_CONTROLLER,
+          TriggerBlockReportRequestProto.newBuilder().
+              setIncremental(options.isIncremental()).
+              build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);
     }

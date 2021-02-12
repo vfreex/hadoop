@@ -18,14 +18,11 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.EnumSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -33,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities.StreamCapability;
-import org.apache.hadoop.hdfs.client.HdfsDataOutputStream.SyncFlag;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.io.IOUtils;
@@ -199,26 +195,19 @@ public class TestDFSStripedOutputStream {
   public void testStreamFlush() throws Exception {
     final byte[] bytes = StripedFileTestUtil.generateBytes(blockSize *
         dataBlocks * 3 + cellSize * dataBlocks + cellSize + 123);
-    try (FSDataOutputStream os = fs.create(new Path("/ec-file-1"))) {
-      assertFalse(
-          "DFSStripedOutputStream should not have hflush() capability yet!",
-          os.hasCapability(StreamCapability.HFLUSH.getValue()));
-      assertFalse(
-          "DFSStripedOutputStream should not have hsync() capability yet!",
-          os.hasCapability(StreamCapability.HSYNC.getValue()));
-      try (InputStream is = new ByteArrayInputStream(bytes)) {
-        IOUtils.copyBytes(is, os, bytes.length);
-        os.hflush();
-        IOUtils.copyBytes(is, os, bytes.length);
-        os.hsync();
-        IOUtils.copyBytes(is, os, bytes.length);
-      }
-      assertTrue("stream is not a DFSStripedOutputStream",
-          os.getWrappedStream() instanceof DFSStripedOutputStream);
-      final DFSStripedOutputStream dfssos =
-          (DFSStripedOutputStream) os.getWrappedStream();
-      dfssos.hsync(EnumSet.of(SyncFlag.UPDATE_LENGTH));
-    }
+    FSDataOutputStream os = fs.create(new Path("/ec-file-1"));
+    assertFalse("DFSStripedOutputStream should not have hflush() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HFLUSH.getValue()));
+    assertFalse("DFSStripedOutputStream should not have hsync() " +
+            "capability yet!", os.hasCapability(
+                StreamCapability.HSYNC.getValue()));
+    InputStream is = new ByteArrayInputStream(bytes);
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hflush();
+    IOUtils.copyBytes(is, os, bytes.length);
+    os.hsync();
+    os.close();
   }
 
   private void testOneFile(String src, int writeBytes) throws Exception {
@@ -231,20 +220,5 @@ public class TestDFSStripedOutputStream {
 
     StripedFileTestUtil.checkData(fs, testPath, writeBytes,
         new ArrayList<DatanodeInfo>(), null, blockSize * dataBlocks);
-  }
-
-  @Test
-  public void testFileBlockSizeSmallerThanCellSize() throws Exception {
-    final Path path = new Path("testFileBlockSizeSmallerThanCellSize");
-    final byte[] bytes = StripedFileTestUtil.generateBytes(cellSize * 2);
-    try {
-      DFSTestUtil.writeFile(fs, path, bytes, cellSize / 2);
-      fail("Creating a file with block size smaller than "
-          + "ec policy's cell size should fail");
-    } catch (IOException expected) {
-      LOG.info("Caught expected exception", expected);
-      GenericTestUtils
-          .assertExceptionContains("less than the cell size", expected);
-    }
   }
 }

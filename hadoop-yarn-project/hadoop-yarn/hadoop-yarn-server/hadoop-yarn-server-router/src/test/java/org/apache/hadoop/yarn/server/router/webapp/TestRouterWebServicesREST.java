@@ -70,7 +70,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -197,27 +196,17 @@ public class TestRouterWebServicesREST {
   public static void setUp() throws Exception {
     conf = new YarnConfiguration();
 
-    File baseDir = GenericTestUtils.getTestDir("processes");
-    baseDir.mkdirs();
-    String baseName = TestRouterWebServicesREST.class.getSimpleName();
-
-    File rmOutput = new File(baseDir, baseName + "-rm.log");
-    rmOutput.createNewFile();
     List<String> addClasspath = new LinkedList<>();
     addClasspath.add("../hadoop-yarn-server-timelineservice/target/classes");
-    rm = new JavaProcess(ResourceManager.class, addClasspath, rmOutput);
+    rm = new JavaProcess(ResourceManager.class, addClasspath);
     rmAddress = getRMWebAppURLWithScheme(conf);
     waitWebAppRunning(rmAddress, RM_WEB_SERVICE_PATH);
 
-    File routerOutput = new File(baseDir, baseName + "-router.log");
-    routerOutput.createNewFile();
-    router = new JavaProcess(Router.class, routerOutput);
+    router = new JavaProcess(Router.class);
     routerAddress = getRouterWebAppURLWithScheme(conf);
     waitWebAppRunning(routerAddress, RM_WEB_SERVICE_PATH);
 
-    File nmOutput = new File(baseDir, baseName + "-nm.log");
-    nmOutput.createNewFile();
-    nm = new JavaProcess(NodeManager.class, nmOutput);
+    nm = new JavaProcess(NodeManager.class);
     nmAddress = "http://" + getNMWebAppURLWithoutScheme(conf);
     waitWebAppRunning(nmAddress, "/ws/v1/node");
   }

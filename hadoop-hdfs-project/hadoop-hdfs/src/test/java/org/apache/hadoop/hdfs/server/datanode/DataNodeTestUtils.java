@@ -98,14 +98,6 @@ public class DataNodeTestUtils {
     }
   }
 
-  public static void pauseIBR(DataNode dn) {
-    dn.setIBRDisabledForTest(true);
-  }
-
-  public static void resumeIBR(DataNode dn) {
-    dn.setIBRDisabledForTest(false);
-  }
-
   public static InterDatanodeProtocol createInterDatanodeProtocolProxy(
       DataNode dn, DatanodeID datanodeid, final Configuration conf,
       boolean connectToDnViaHostname) throws IOException {

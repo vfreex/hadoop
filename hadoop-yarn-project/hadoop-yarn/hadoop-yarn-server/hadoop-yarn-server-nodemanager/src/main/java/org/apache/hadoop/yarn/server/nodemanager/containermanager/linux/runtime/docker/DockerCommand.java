@@ -22,6 +22,7 @@ package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
@@ -116,15 +117,16 @@ public abstract class DockerCommand {
    * @param dockerCommand Specific command to be run by docker.
    * @param containerName
    * @param env
+   * @param conf
    * @param nmContext
    * @return Returns the PrivilegedOperation object to be used.
    * @throws ContainerExecutionException
    */
   public PrivilegedOperation preparePrivilegedOperation(
       DockerCommand dockerCommand, String containerName, Map<String,
-      String> env, Context nmContext)
+      String> env, Configuration conf, Context nmContext)
       throws ContainerExecutionException {
-    DockerClient dockerClient = new DockerClient();
+    DockerClient dockerClient = new DockerClient(conf);
     String commandFile =
         dockerClient.writeCommandToTempFile(dockerCommand,
         ContainerId.fromString(containerName),

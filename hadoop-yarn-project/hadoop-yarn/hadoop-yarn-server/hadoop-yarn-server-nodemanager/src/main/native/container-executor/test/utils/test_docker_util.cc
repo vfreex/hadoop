@@ -432,68 +432,6 @@ namespace ContainerExecutor {
     run_docker_run_helper_function(file_cmd_vec, set_hostname);
   }
 
-  TEST_F(TestDockerUtil, test_set_runtime) {
-    struct configuration container_cfg;
-    struct args buff = ARGS_INITIAL_VALUE;
-    int ret = 0;
-    std::string container_executor_cfg_contents = "[docker]\n"
-        "  docker.trusted.registries=hadoop\n"
-        "  docker.allowed.runtimes=lxc,nvidia";
-    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n runtime=lxc", "--runtime=lxc"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n runtime=nvidia", "--runtime=nvidia"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run", ""));
-    write_container_executor_cfg(container_executor_cfg_contents);
-    ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
-
-    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
-    if (ret != 0) {
-      FAIL();
-    }
-    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
-      struct configuration cmd_cfg;
-      write_command_file(itr->first);
-      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
-      if (ret != 0) {
-        FAIL();
-      }
-      ret = set_runtime(&cmd_cfg, &container_cfg, &buff);
-      char *actual = flatten(&buff);
-      ASSERT_EQ(0, ret) << "error message: " << get_docker_error_message(ret) << " for input " << itr->first;
-      ASSERT_STREQ(itr->second.c_str(), actual);
-      reset_args(&buff);
-      free(actual);
-      free_configuration(&cmd_cfg);
-    }
-    struct configuration cmd_cfg_1;
-    write_command_file("[docker-command-execution]\n  docker-command=run\n  runtime=nvidia1");
-    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
-    if (ret != 0) {
-      FAIL();
-    }
-    ret = set_runtime(&cmd_cfg_1, &container_cfg, &buff);
-    ASSERT_EQ(INVALID_DOCKER_RUNTIME, ret);
-    ASSERT_EQ(0, buff.length);
-    reset_args(&buff);
-    free_configuration(&container_cfg);
-
-    container_executor_cfg_contents = "[docker]\n";
-    write_container_executor_cfg(container_executor_cfg_contents);
-    ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
-    if (ret != 0) {
-      FAIL();
-    }
-    ret = set_runtime(&cmd_cfg_1, &container_cfg, &buff);
-    ASSERT_EQ(INVALID_DOCKER_RUNTIME, ret);
-    ASSERT_EQ(0, buff.length);
-    reset_args(&buff);
-    free_configuration(&cmd_cfg_1);
-    free_configuration(&container_cfg);
-  }
-
   TEST_F(TestDockerUtil, test_set_group_add) {
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
@@ -562,65 +500,6 @@ namespace ContainerExecutor {
     reset_args(&buff);
     free_configuration(&cmd_cfg_1);
     free_configuration(&container_cfg);
-  }
-
-  TEST_F(TestDockerUtil, test_add_ports_mapping_to_command) {
-    struct args buff = ARGS_INITIAL_VALUE;
-    int ret = 0;
-    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,1234:1234,:2222",
-        "-p 127.0.0.1:8080:80 -p 1234:1234 -p :2222"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=1234:1234,:2222",
-        "-p 1234:1234 -p :2222"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  ports-mapping=:2222", "-p :2222"));
-
-    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
-    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
-      struct configuration cmd_cfg;
-      write_command_file(itr->first);
-      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
-      if (ret != 0) {
-        FAIL();
-      }
-      ret = add_ports_mapping_to_command(&cmd_cfg, &buff);
-      char *actual = flatten(&buff);
-      ASSERT_EQ(0, ret) << "error message: " << get_docker_error_message(ret) << " for input " << itr->first;
-      ASSERT_STREQ(itr->second.c_str(), actual);
-      reset_args(&buff);
-      free(actual);
-      free_configuration(&cmd_cfg);
-    }
-    struct configuration cmd_cfg_1;
-    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=327.0.0.1:8080:80,1234:1234,:2222");
-    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
-    if (ret != 0) {
-      FAIL();
-    }
-    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
-    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
-    reset_args(&buff);
-
-    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,12s4:1234,:2222");
-    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
-    if (ret != 0) {
-      FAIL();
-    }
-    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
-    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
-    reset_args(&buff);
-
-    write_command_file("[docker-command-execution]\n  docker-command=run\n  ports-mapping=127.0.0.1:8080:80,1234:1234,:s2s2");
-    ret = read_config(docker_command_file.c_str(), &cmd_cfg_1);
-    if (ret != 0) {
-      FAIL();
-    }
-    ret = add_ports_mapping_to_command(&cmd_cfg_1, &buff);
-    ASSERT_EQ(INVALID_DOCKER_PORTS_MAPPING, ret);
-    reset_args(&buff);
-    free_configuration(&cmd_cfg_1);
   }
 
   TEST_F(TestDockerUtil, test_set_pid_namespace) {
@@ -1055,42 +934,36 @@ namespace ContainerExecutor {
   }
 
 
-  TEST_F(TestDockerUtil, test_add_mounts) {
+  TEST_F(TestDockerUtil, test_add_rw_mounts) {
     struct configuration container_cfg, cmd_cfg;
     struct args buff = ARGS_INITIAL_VALUE;
     int ret = 0;
     std::string container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n  "
-                                                              "docker.allowed.rw-mounts=/opt,/var,/usr/bin/cut,/usr/bin/awk\n  "
+                                                              "docker.allowed.rw-mounts=/opt,/var,/usr/bin/cut\n  "
                                                               "docker.allowed.ro-mounts=/etc/passwd";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n  mounts=/var:/var:rw", "-v /var:/var:rw"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/var:/var", "-v /var:/var"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  mounts=/var:/var:rw", ""));
+        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  rw-mounts=/var:/var", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/var/:/var/:rw", "-v /var/:/var/:rw"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/var/:/var/", "-v /var/:/var/"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/usr/bin/cut:/usr/bin/cut:rw",
-        "-v /usr/bin/cut:/usr/bin/cut:rw"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/usr/bin/cut:/usr/bin/cut",
+        "-v /usr/bin/cut:/usr/bin/cut"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  mounts=/lib:/lib:rw",
+        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  rw-mounts=/lib:/lib",
         ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/opt:/mydisk1:rw,/var/log/:/mydisk2:rw",
-        "-v /opt:/mydisk1:rw -v /var/log/:/mydisk2:rw"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/opt:/mydisk1,/var/log/:/mydisk2",
+        "-v /opt:/mydisk1 -v /var/log/:/mydisk2"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  mounts=/opt:/mydisk1:rw,/var/log/:/mydisk2:rw",
+        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  rw-mounts=/opt:/mydisk1,/var/log/:/mydisk2",
         ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n", ""));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n mounts=/usr/bin/awk:/awk:rw+shared,/etc/passwd:/etc/passwd:ro",
-        "-v /usr/bin/awk:/awk:rw,shared -v /etc/passwd:/etc/passwd:ro"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n mounts=/var:/var:ro+rprivate,/etc/passwd:/etc/passwd:ro+rshared",
-        "-v /var:/var:ro,rprivate -v /etc/passwd:/etc/passwd:ro,rshared"));
     write_container_executor_cfg(container_executor_cfg_contents);
     ret = read_config(container_executor_cfg_file.c_str(), &container_cfg);
     if (ret != 0) {
@@ -1111,7 +984,7 @@ namespace ContainerExecutor {
       if (ret != 0) {
         FAIL();
       }
-      ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+      ret = add_rw_mounts(&cmd_cfg, &container_cfg, &buff);
       char *actual = flatten(&buff);
       ASSERT_EQ(0, ret);
       ASSERT_STREQ(itr->second.c_str(), actual);
@@ -1122,22 +995,13 @@ namespace ContainerExecutor {
 
     std::vector<std::pair<std::string, int> > bad_file_cmds_vec;
     bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/lib:/lib:rw",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/lib:/lib",
         static_cast<int>(INVALID_DOCKER_RW_MOUNT)));
     bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/usr/bin/:/usr/bin:rw",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/usr/bin/:/usr/bin",
         static_cast<int>(INVALID_DOCKER_RW_MOUNT)));
     bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/blah:/blah:rw",
-        static_cast<int>(INVALID_DOCKER_MOUNT)));
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n mounts=/tmp:/tmp:shared",
-        static_cast<int>(INVALID_DOCKER_MOUNT)));
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n mounts=/lib:/lib",
-        static_cast<int>(INVALID_DOCKER_MOUNT)));
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n mounts=/lib:/lib:other",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=/blah:/blah",
         static_cast<int>(INVALID_DOCKER_MOUNT)));
 
     std::vector<std::pair<std::string, int> >::const_iterator itr2;
@@ -1148,7 +1012,7 @@ namespace ContainerExecutor {
       if (ret != 0) {
         FAIL();
       }
-      ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+      ret = add_rw_mounts(&cmd_cfg, &container_cfg, &buff);
       char *actual = flatten(&buff);
       ASSERT_EQ(itr2->second, ret);
       ASSERT_STREQ("", actual);
@@ -1160,14 +1024,14 @@ namespace ContainerExecutor {
     // verify that you can't mount any directory in the container-executor.cfg path
     char *ce_path = realpath("../etc/hadoop/container-executor.cfg", NULL);
     while (strlen(ce_path) != 0) {
-      std::string cmd_file_contents = "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=";
-      cmd_file_contents.append(ce_path).append(":").append("/etc/hadoop").append(":rw");
+      std::string cmd_file_contents = "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  rw-mounts=";
+      cmd_file_contents.append(ce_path).append(":").append("/etc/hadoop");
       write_command_file(cmd_file_contents);
       ret = read_config(docker_command_file.c_str(), &cmd_cfg);
       if (ret != 0) {
         FAIL();
       }
-      ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+      ret = add_rw_mounts(&cmd_cfg, &container_cfg, &buff);
       ASSERT_EQ(INVALID_DOCKER_RW_MOUNT, ret) << " for input " << cmd_file_contents;
       char *actual = flatten(&buff);
       ASSERT_STREQ("", actual);
@@ -1182,7 +1046,7 @@ namespace ContainerExecutor {
     free(ce_path);
     free_configuration(&container_cfg);
 
-    // For untrusted image, container add_mounts will pass through
+    // For untrusted image, container add_rw_mounts will pass through
     // without mounting or report error code.
     container_executor_cfg_contents = "[docker]\n";
     write_container_executor_cfg(container_executor_cfg_contents);
@@ -1190,7 +1054,7 @@ namespace ContainerExecutor {
     if (ret != 0) {
       FAIL();
     }
-    ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+    ret = add_rw_mounts(&cmd_cfg, &container_cfg, &buff);
     char *actual = flatten(&buff);
     ASSERT_EQ(0, ret);
     ASSERT_STREQ("", actual);
@@ -1209,26 +1073,26 @@ namespace ContainerExecutor {
                                                               "docker.allowed.ro-mounts=/etc/passwd,/etc/group";
     std::vector<std::pair<std::string, std::string> > file_cmd_vec;
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  mounts=/var:/var:ro", ""));
+        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  ro-mounts=/var:/var", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  mounts=/etc:/etc:ro", ""));
+        "[docker-command-execution]\n  docker-command=run\n image=nothadoop/image\n  ro-mounts=/etc:/etc", ""));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/var/:/var/:ro", "-v /var/:/var/:ro"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/var/:/var/", "-v /var/:/var/:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/home:/home:ro", "-v /home:/home:ro"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/home:/home", "-v /home:/home:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/home/:/home:ro", "-v /home/:/home:ro"));
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/home/:/home", "-v /home/:/home:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/usr/bin/cut:/usr/bin/cut:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/usr/bin/cut:/usr/bin/cut",
         "-v /usr/bin/cut:/usr/bin/cut:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/etc/group:/etc/group:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/etc/group:/etc/group",
         "-v /etc/group:/etc/group:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/etc/passwd:/etc/passwd:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/etc/passwd:/etc/passwd",
         "-v /etc/passwd:/etc/passwd:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/var/log:/mydisk1:ro,/etc/passwd:/etc/passwd:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/var/log:/mydisk1,/etc/passwd:/etc/passwd",
         "-v /var/log:/mydisk1:ro -v /etc/passwd:/etc/passwd:ro"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n", ""));
@@ -1252,7 +1116,7 @@ namespace ContainerExecutor {
       if (ret != 0) {
         FAIL();
       }
-      ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+      ret = add_ro_mounts(&cmd_cfg, &container_cfg, &buff);
       char *actual = flatten(&buff);
       ASSERT_EQ(0, ret);
       ASSERT_STREQ(itr->second.c_str(), actual);
@@ -1263,10 +1127,10 @@ namespace ContainerExecutor {
 
     std::vector<std::pair<std::string, int> > bad_file_cmds_vec;
     bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/etc:/etc:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/etc:/etc",
         static_cast<int>(INVALID_DOCKER_RO_MOUNT)));
     bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/blah:/blah:ro",
+        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/blah:/blah",
         static_cast<int>(INVALID_DOCKER_MOUNT)));
 
     std::vector<std::pair<std::string, int> >::const_iterator itr2;
@@ -1277,7 +1141,7 @@ namespace ContainerExecutor {
       if (ret != 0) {
         FAIL();
       }
-      ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+      ret = add_ro_mounts(&cmd_cfg, &container_cfg, &buff);
       char *actual = flatten(&buff);
       ASSERT_EQ(itr2->second, ret);
       ASSERT_STREQ("", actual);
@@ -1293,81 +1157,17 @@ namespace ContainerExecutor {
     if (ret != 0) {
       FAIL();
     }
-    write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  mounts=/home:/home:ro");
+    write_command_file("[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  ro-mounts=/home:/home");
     ret = read_config(docker_command_file.c_str(), &cmd_cfg);
     if (ret != 0) {
       FAIL();
     }
-    ret = add_mounts(&cmd_cfg, &container_cfg, &buff);
+    ret = add_ro_mounts(&cmd_cfg, &container_cfg, &buff);
     ASSERT_EQ(INVALID_DOCKER_RO_MOUNT, ret);
     ASSERT_EQ(0, buff.length);
     reset_args(&buff);
     free_configuration(&cmd_cfg);
     free_configuration(&container_cfg);
-  }
-
-  TEST_F(TestDockerUtil, test_add_tmpfs_mounts) {
-    struct configuration cmd_cfg;
-    struct args buff = ARGS_INITIAL_VALUE;
-    int ret = 0;
-    std::string container_executor_cfg_contents = "[docker]\n  docker.trusted.registries=hadoop\n";
-    std::vector<std::pair<std::string, std::string> > file_cmd_vec;
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n image=hadoop/image\n  tmpfs=/run",
-        "--tmpfs /run"));
-    file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/run,/run2",
-        "--tmpfs /run --tmpfs /run2"));
-    write_container_executor_cfg(container_executor_cfg_contents);
-
-    ret = create_ce_file();
-    if (ret != 0) {
-      std::cerr << "Could not create ce file, skipping test" << std::endl;
-      return;
-    }
-
-    std::vector<std::pair<std::string, std::string> >::const_iterator itr;
-    for (itr = file_cmd_vec.begin(); itr != file_cmd_vec.end(); ++itr) {
-      write_command_file(itr->first);
-      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
-      if (ret != 0) {
-        FAIL();
-      }
-      ret = add_tmpfs_mounts(&cmd_cfg, &buff);
-      char *actual = flatten(&buff);
-      ASSERT_EQ(0, ret);
-      ASSERT_STREQ(itr->second.c_str(), actual);
-      reset_args(&buff);
-      free(actual);
-      free_configuration(&cmd_cfg);
-    }
-
-    std::vector<std::pair<std::string, int> > bad_file_cmds_vec;
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=run",
-        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/ru:n",
-        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
-    bad_file_cmds_vec.push_back(std::make_pair<std::string, int>(
-        "[docker-command-execution]\n  docker-command=run\n  image=hadoop/image\n  tmpfs=/run:",
-        static_cast<int>(INVALID_DOCKER_TMPFS_MOUNT)));
-
-    std::vector<std::pair<std::string, int> >::const_iterator itr2;
-    for (itr2 = bad_file_cmds_vec.begin(); itr2 != bad_file_cmds_vec.end(); ++itr2) {
-      write_command_file(itr2->first);
-      ret = read_config(docker_command_file.c_str(), &cmd_cfg);
-      if (ret != 0) {
-        FAIL();
-      }
-      ret = add_tmpfs_mounts(&cmd_cfg, &buff);
-      char *actual = flatten(&buff);
-      ASSERT_EQ(itr2->second, ret);
-      ASSERT_STREQ("", actual);
-      reset_args(&buff);
-      free(actual);
-      free_configuration(&cmd_cfg);
-    }
   }
 
   TEST_F(TestDockerUtil, test_docker_run_privileged) {
@@ -1403,18 +1203,18 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
+            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
             " --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash "
             "test_script.sh arg1 arg2"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1425,54 +1225,56 @@ namespace ContainerExecutor {
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
             "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
             " test_script.sh arg1 arg2"));
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+            "  network=bridge\n  net=bridge\n"
+            "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
             " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
     // Test privileged container
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image "
             "bash test_script.sh arg1 arg2"));
 
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=root\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+            "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+            " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --privileged --cap-drop=ALL "
             "--cap-add=CHOWN --cap-add=SETUID --hostname=host-id "
             "--device=/dev/test:/dev/test hadoop/docker-image bash test_script.sh arg1 arg2"));
 
     file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  network=bridge\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
+            "  network=bridge\n  net=bridge\n"
+            "  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
-        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --cap-drop=ALL "
+        "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge --cap-drop=ALL "
             "--hostname=host-id --group-add 1000 --group-add 1001 "
             "docker-image bash test_script.sh arg1 arg2"));
 
@@ -1490,8 +1292,8 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-            "  network=bridge\n  privileged=true\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+            "  network=bridge\n  net=bridge\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n  group-add=1000,1001\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
         PRIVILEGED_CONTAINERS_DISABLED));
@@ -1500,7 +1302,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/var/log:/var/log:rw\n"
+            "  ro-mounts=/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/var/log:/var/log\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1510,7 +1312,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/bin:/bin:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/bin:/bin,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1520,7 +1322,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n"
             "  cap-add=CHOWN,SETUID,SETGID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1530,7 +1332,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/dev1:/dev/dev1\n  privileged=true\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1540,7 +1342,7 @@ namespace ContainerExecutor {
     bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
         "[docker-command-execution]\n"
             "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-            "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+            "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
             "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n  net=host\n"
             "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
             "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1630,18 +1432,18 @@ namespace ContainerExecutor {
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-              "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
               "  network=bridge\n  devices=/dev/test:/dev/test\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-              " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
+              " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN"
               " --cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash "
               "test_script.sh arg1 arg2"));
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-              "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
               "  network=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
@@ -1651,29 +1453,30 @@ namespace ContainerExecutor {
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-              "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  devices=/dev/test:/dev/test\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+              "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
-              " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp:rw --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge -v /var/log:/var/log:ro -v /var/lib:/lib:ro"
+              " -v /usr/bin/cut:/usr/bin/cut:ro -v /tmp:/tmp --cgroup-parent=ctr-cgroup --cap-drop=ALL --cap-add=CHOWN "
               "--cap-add=SETUID --hostname=host-id --device=/dev/test:/dev/test hadoop/docker-image bash"
               " test_script.sh arg1 arg2"));
       file_cmd_vec.push_back(std::make_pair<std::string, std::string>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n image=nothadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-              "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+              "  network=bridge\n  net=bridge\n"
+              "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
-          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm"
+          "run --name=container_e1_12312_11111_02_000001 --user=nobody -d --rm --net=bridge"
               " --cgroup-parent=ctr-cgroup --cap-drop=ALL --hostname=host-id nothadoop/docker-image bash test_script.sh arg1 arg2"));
 
       std::vector<std::pair<std::string, int> > bad_file_cmd_vec;
       bad_file_cmd_vec.push_back(std::make_pair<std::string, int>(
           "[docker-command-execution]\n"
               "  docker-command=run\n  name=container_e1_12312_11111_02_000001\n  image=hadoop/docker-image\n  user=nobody\n  hostname=host-id\n"
-              "  mounts=/var/log:/var/log:ro,/var/lib:/lib:ro,/usr/bin/cut:/usr/bin/cut:ro,/tmp:/tmp:rw\n"
-              "  network=bridge\n  devices=/dev/test:/dev/test\n  privileged=true\n"
+              "  ro-mounts=/var/log:/var/log,/var/lib:/lib,/usr/bin/cut:/usr/bin/cut\n  rw-mounts=/tmp:/tmp\n"
+              "  network=bridge\n  devices=/dev/test:/dev/test\n  net=bridge\n  privileged=true\n"
               "  cap-add=CHOWN,SETUID\n  cgroup-parent=ctr-cgroup\n  detach=true\n  rm=true\n"
               "  launch-command=bash,test_script.sh,arg1,arg2",
           static_cast<int>(PRIVILEGED_CONTAINERS_DISABLED)));

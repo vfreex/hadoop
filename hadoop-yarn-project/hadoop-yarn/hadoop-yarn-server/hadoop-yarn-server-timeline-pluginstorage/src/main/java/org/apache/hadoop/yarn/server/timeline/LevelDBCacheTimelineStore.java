@@ -37,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -210,18 +211,18 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
     }
 
     @Override
-    public CloseableIterator<V> valueSetIterator() {
+    public Iterator<V> valueSetIterator() {
       return getIterator(null, Long.MAX_VALUE);
     }
 
     @Override
-    public CloseableIterator<V> valueSetIterator(V minV) {
+    public Iterator<V> valueSetIterator(V minV) {
       return getIterator(
           new EntityIdentifier(minV.getEntityId(), minV.getEntityType()),
           minV.getStartTime());
     }
 
-    private CloseableIterator<V> getIterator(
+    private Iterator<V> getIterator(
         EntityIdentifier startId, long startTimeMax) {
 
       final DBIterator internalDbIterator = entityDb.iterator();
@@ -246,7 +247,7 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
           = entityPrefixKeyBuilder.getBytesForLookup();
       internalDbIterator.seek(startPrefixBytes);
 
-      return new CloseableIterator<V>() {
+      return new Iterator<V>() {
         @Override
         public boolean hasNext() {
           if (!internalDbIterator.hasNext()) {
@@ -282,11 +283,6 @@ public class LevelDBCacheTimelineStore extends KeyValueBasedTimelineStore {
         public void remove() {
           LOG.error("LevelDB map adapter does not support iterate-and-remove"
               + " use cases. ");
-        }
-
-        @Override
-        public void close() throws IOException {
-          internalDbIterator.close();
         }
       };
     }

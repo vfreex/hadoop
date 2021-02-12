@@ -18,6 +18,7 @@
 
 package org.apache.hadoop.hdfs.server.datanode.checker;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -34,7 +35,6 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.WeakHashMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -88,7 +88,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
    */
   private final Map<Checkable, LastCheckResult<V>> completedChecks;
 
-  public ThrottledAsyncChecker(final Timer timer,
+  ThrottledAsyncChecker(final Timer timer,
                         final long minMsBetweenChecks,
                         final long diskCheckTimeout,
                         final ExecutorService executorService) {
@@ -120,17 +120,17 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
   public Optional<ListenableFuture<V>> schedule(Checkable<K, V> target,
                                                 K context) {
     if (checksInProgress.containsKey(target)) {
-      return Optional.empty();
+      return Optional.absent();
     }
 
-    final LastCheckResult<V> result = completedChecks.get(target);
-    if (result != null) {
+    if (completedChecks.containsKey(target)) {
+      final LastCheckResult<V> result = completedChecks.get(target);
       final long msSinceLastCheck = timer.monotonicNow() - result.completedAt;
       if (msSinceLastCheck < minMsBetweenChecks) {
         LOG.debug("Skipped checking {}. Time since last check {}ms " +
                 "is less than the min gap {}ms.",
             target, msSinceLastCheck, minMsBetweenChecks);
-        return Optional.empty();
+        return Optional.absent();
       }
     }
 
@@ -182,7 +182,7 @@ public class ThrottledAsyncChecker<K, V> implements AsyncChecker<K, V> {
               t, timer.monotonicNow()));
         }
       }
-    }, MoreExecutors.directExecutor());
+    });
   }
 
   /**

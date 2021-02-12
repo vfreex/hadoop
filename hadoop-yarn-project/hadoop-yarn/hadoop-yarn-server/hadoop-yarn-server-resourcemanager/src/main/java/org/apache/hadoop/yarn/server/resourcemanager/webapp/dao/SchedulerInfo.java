@@ -53,8 +53,6 @@ public class SchedulerInfo {
       this.schedulerName = "Fair Scheduler";
     } else if (rs instanceof FifoScheduler) {
       this.schedulerName = "Fifo Scheduler";
-    } else {
-      this.schedulerName = rs.getClass().getSimpleName();
     }
     this.minAllocResource = new ResourceInfo(rs.getMinimumResourceCapability());
     this.maxAllocResource = new ResourceInfo(rs.getMaximumResourceCapability());

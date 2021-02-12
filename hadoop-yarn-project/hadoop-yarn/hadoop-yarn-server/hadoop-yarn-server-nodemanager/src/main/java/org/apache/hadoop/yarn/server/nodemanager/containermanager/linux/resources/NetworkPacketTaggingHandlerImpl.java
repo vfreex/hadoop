@@ -160,9 +160,4 @@ public class NetworkPacketTaggingHandlerImpl
       Configuration conf) {
     return NetworkTagMappingManagerFactory.getManager(conf);
   }
-
-  @Override
-  public String toString() {
-    return NetworkPacketTaggingHandlerImpl.class.getName();
-  }
 }

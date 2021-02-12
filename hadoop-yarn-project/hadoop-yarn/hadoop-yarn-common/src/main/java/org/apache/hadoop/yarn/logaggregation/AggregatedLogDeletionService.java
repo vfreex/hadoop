@@ -41,8 +41,6 @@ import org.apache.hadoop.yarn.client.ClientRMProxy;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.ApplicationNotFoundException;
 import org.apache.hadoop.yarn.exceptions.YarnException;
-import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileController;
-import org.apache.hadoop.yarn.logaggregation.filecontroller.LogAggregationFileControllerFactory;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -68,12 +66,10 @@ public class AggregatedLogDeletionService extends AbstractService {
     public LogDeletionTask(Configuration conf, long retentionSecs, ApplicationClientProtocol rmClient) {
       this.conf = conf;
       this.retentionMillis = retentionSecs * 1000;
-      LogAggregationFileControllerFactory factory =
-          new LogAggregationFileControllerFactory(conf);
-      LogAggregationFileController fileController =
-          factory.getFileControllerForWrite();
-      this.remoteRootLogDir = fileController.getRemoteRootLogDir();
-      this.suffix = fileController.getRemoteRootLogDirSuffix();
+      this.suffix = LogAggregationUtils.getRemoteNodeLogDirSuffix(conf);
+      this.remoteRootLogDir =
+        new Path(conf.get(YarnConfiguration.NM_REMOTE_APP_LOG_DIR,
+            YarnConfiguration.DEFAULT_NM_REMOTE_APP_LOG_DIR));
       this.rmClient = rmClient;
     }
     
@@ -262,7 +258,7 @@ public class AggregatedLogDeletionService extends AbstractService {
       return;
     }
     setLogAggCheckIntervalMsecs(retentionSecs);
-    task = new LogDeletionTask(conf, retentionSecs, createRMClient());
+    task = new LogDeletionTask(conf, retentionSecs, creatRMClient());
     timer = new Timer();
     timer.scheduleAtFixedRate(task, 0, checkIntervalMsecs);
   }
@@ -285,7 +281,7 @@ public class AggregatedLogDeletionService extends AbstractService {
   // We have already marked ApplicationClientProtocol.getApplicationReport
   // as @Idempotent, it will automatically take care of RM restart/failover.
   @VisibleForTesting
-  protected ApplicationClientProtocol createRMClient() throws IOException {
+  protected ApplicationClientProtocol creatRMClient() throws IOException {
     return ClientRMProxy.createRMProxy(getConfig(),
       ApplicationClientProtocol.class);
   }

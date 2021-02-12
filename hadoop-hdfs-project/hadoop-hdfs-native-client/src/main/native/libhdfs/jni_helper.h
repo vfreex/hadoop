@@ -26,15 +26,7 @@
 #include <stdarg.h>
 #include <errno.h>
 
-#ifdef WIN32
-    #define PATH_SEPARATOR ';'
-    #define PATH_SEPARATOR_STR ";"
-#else
-    #define PATH_SEPARATOR ':'
-    #define PATH_SEPARATOR_STR ":"
-#endif
-
-// #define _LIBHDFS_JNI_HELPER_DEBUGGING_ON_
+#define PATH_SEPARATOR ':'
 
 
 /** Denote the method we want to invoke as STATIC or INSTANCE */

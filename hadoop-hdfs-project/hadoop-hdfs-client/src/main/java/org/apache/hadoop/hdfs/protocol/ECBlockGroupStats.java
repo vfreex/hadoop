@@ -34,26 +34,15 @@ public final class ECBlockGroupStats {
   private final long missingBlockGroups;
   private final long bytesInFutureBlockGroups;
   private final long pendingDeletionBlocks;
-  private final Long highestPriorityLowRedundancyBlocks;
 
   public ECBlockGroupStats(long lowRedundancyBlockGroups,
       long corruptBlockGroups, long missingBlockGroups,
       long bytesInFutureBlockGroups, long pendingDeletionBlocks) {
-    this(lowRedundancyBlockGroups, corruptBlockGroups, missingBlockGroups,
-        bytesInFutureBlockGroups, pendingDeletionBlocks, null);
-  }
-
-  public ECBlockGroupStats(long lowRedundancyBlockGroups,
-      long corruptBlockGroups, long missingBlockGroups,
-      long bytesInFutureBlockGroups, long pendingDeletionBlocks,
-      Long highestPriorityLowRedundancyBlocks) {
     this.lowRedundancyBlockGroups = lowRedundancyBlockGroups;
     this.corruptBlockGroups = corruptBlockGroups;
     this.missingBlockGroups = missingBlockGroups;
     this.bytesInFutureBlockGroups = bytesInFutureBlockGroups;
     this.pendingDeletionBlocks = pendingDeletionBlocks;
-    this.highestPriorityLowRedundancyBlocks
-        = highestPriorityLowRedundancyBlocks;
   }
 
   public long getBytesInFutureBlockGroups() {
@@ -76,14 +65,6 @@ public final class ECBlockGroupStats {
     return pendingDeletionBlocks;
   }
 
-  public boolean hasHighestPriorityLowRedundancyBlocks() {
-    return getHighestPriorityLowRedundancyBlocks() != null;
-  }
-
-  public Long getHighestPriorityLowRedundancyBlocks() {
-    return highestPriorityLowRedundancyBlocks;
-  }
-
   @Override
   public String toString() {
     StringBuilder statsBuilder = new StringBuilder();
@@ -95,12 +76,8 @@ public final class ECBlockGroupStats {
         .append(", BytesInFutureBlockGroups=").append(
             getBytesInFutureBlockGroups())
         .append(", PendingDeletionBlocks=").append(
-            getPendingDeletionBlocks());
-    if (hasHighestPriorityLowRedundancyBlocks()) {
-      statsBuilder.append(", HighestPriorityLowRedundancyBlocks=")
-          .append(getHighestPriorityLowRedundancyBlocks());
-    }
-    statsBuilder.append("]");
+            getPendingDeletionBlocks())
+        .append("]");
     return statsBuilder.toString();
   }
 }

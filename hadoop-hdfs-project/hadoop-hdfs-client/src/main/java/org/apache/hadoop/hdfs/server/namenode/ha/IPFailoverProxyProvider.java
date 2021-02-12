@@ -19,11 +19,15 @@ package org.apache.hadoop.hdfs.server.namenode.ha;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.net.URI;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.hdfs.DFSUtilClient;
+import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.ipc.RPC;
+import org.apache.hadoop.security.UserGroupInformation;
 
 /**
  * A NNFailoverProxyProvider implementation which works on IP failover setup.
@@ -43,18 +47,53 @@ import org.apache.hadoop.ipc.RPC;
  */
 public class IPFailoverProxyProvider<T> extends
     AbstractNNFailoverProxyProvider<T> {
-  private final NNProxyInfo<T> nnProxyInfo;
+  private final Configuration conf;
+  private final Class<T> xface;
+  private final URI nameNodeUri;
+  private final HAProxyFactory<T> factory;
+  private ProxyInfo<T> nnProxyInfo = null;
 
   public IPFailoverProxyProvider(Configuration conf, URI uri,
       Class<T> xface, HAProxyFactory<T> factory) {
-    super(conf, uri, xface, factory);
-    this.nnProxyInfo = new NNProxyInfo<>(DFSUtilClient.getNNAddress(uri));
+    this.xface = xface;
+    this.nameNodeUri = uri;
+    this.factory = factory;
+
+    this.conf = new Configuration(conf);
+    int maxRetries = this.conf.getInt(
+        HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_KEY,
+        HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_DEFAULT);
+    this.conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_KEY,
+        maxRetries);
+
+    int maxRetriesOnSocketTimeouts = this.conf.getInt(
+        HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+        HdfsClientConfigKeys.Failover.CONNECTION_RETRIES_ON_SOCKET_TIMEOUTS_DEFAULT);
+    this.conf.setInt(
+        CommonConfigurationKeysPublic.IPC_CLIENT_CONNECT_MAX_RETRIES_ON_SOCKET_TIMEOUTS_KEY,
+        maxRetriesOnSocketTimeouts);
   }
 
   @Override
-  public synchronized NNProxyInfo<T> getProxy() {
+  public Class<T> getInterface() {
+    return xface;
+  }
+
+  @Override
+  public synchronized ProxyInfo<T> getProxy() {
     // Create a non-ha proxy if not already created.
-    return createProxyIfNeeded(nnProxyInfo);
+    if (nnProxyInfo == null) {
+      try {
+        // Create a proxy that is not wrapped in RetryProxy
+        InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nameNodeUri);
+        nnProxyInfo = new ProxyInfo<T>(factory.createProxy(conf, nnAddr, xface,
+          UserGroupInformation.getCurrentUser(), false), nnAddr.toString());
+      } catch (IOException ioe) {
+        throw new RuntimeException(ioe);
+      }
+    }
+    return nnProxyInfo;
   }
 
   /** Nothing to do for IP failover */
@@ -67,7 +106,7 @@ public class IPFailoverProxyProvider<T> extends
    */
   @Override
   public synchronized void close() throws IOException {
-    if (nnProxyInfo.proxy == null) {
+    if (nnProxyInfo == null) {
       return;
     }
     if (nnProxyInfo.proxy instanceof Closeable) {

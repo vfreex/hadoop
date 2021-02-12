@@ -21,10 +21,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
+import com.google.common.base.Preconditions;
 
 import org.apache.hadoop.hdfs.web.JsonUtil;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
@@ -35,9 +34,6 @@ import java.io.IOException;
 public class DiskBalancerVolume {
   private static final ObjectReader READER =
       new ObjectMapper().readerFor(DiskBalancerVolume.class);
-
-  private static final Logger LOG =
-      LoggerFactory.getLogger(DiskBalancerVolume.class);
 
   private String path;
   private long capacity;
@@ -273,13 +269,10 @@ public class DiskBalancerVolume {
    * @param dfsUsedSpace - dfsUsedSpace for this volume.
    */
   public void setUsed(long dfsUsedSpace) {
-    if (dfsUsedSpace > this.getCapacity()) {
-      LOG.warn("Volume usage ("+dfsUsedSpace+") is greater than capacity ("+
-        this.getCapacity()+"). Setting volume usage to the capacity");
-      this.used = this.getCapacity();
-    } else {
-      this.used = dfsUsedSpace;
-    }
+    Preconditions.checkArgument(dfsUsedSpace < this.getCapacity(),
+        "DiskBalancerVolume.setUsed: dfsUsedSpace(%s) < capacity(%s)",
+        dfsUsedSpace, getCapacity());
+    this.used = dfsUsedSpace;
   }
 
   /**

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.tracing;
 
-import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -29,7 +29,7 @@ public class SpanReceiverInfo {
   private final long id;
   private final String className;
   final List<ConfigurationPair> configPairs =
-      new ArrayList<ConfigurationPair>();
+      new LinkedList<ConfigurationPair>();
 
   static class ConfigurationPair {
     private final String key;

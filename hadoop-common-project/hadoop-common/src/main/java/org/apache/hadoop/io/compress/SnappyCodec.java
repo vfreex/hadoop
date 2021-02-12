@@ -225,6 +225,6 @@ public class SnappyCodec implements Configurable, CompressionCodec, DirectDecomp
    */
   @Override
   public String getDefaultExtension() {
-    return CodecConstants.SNAPPY_CODEC_EXTENSION;
+    return ".snappy";
   }
 }

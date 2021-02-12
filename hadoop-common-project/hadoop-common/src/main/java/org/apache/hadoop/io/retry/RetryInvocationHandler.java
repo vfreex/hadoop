@@ -448,9 +448,4 @@ public class RetryInvocationHandler<T> implements RpcInvocationHandler {
   public ConnectionId getConnectionId() {
     return RPC.getConnectionIdForProxy(proxyDescriptor.getProxy());
   }
-
-  @VisibleForTesting
-  public FailoverProxyProvider<T> getProxyProvider() {
-    return proxyDescriptor.fpp;
-  }
 }

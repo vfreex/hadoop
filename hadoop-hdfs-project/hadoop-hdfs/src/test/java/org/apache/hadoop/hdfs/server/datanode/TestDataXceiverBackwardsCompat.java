@@ -19,7 +19,6 @@
 package org.apache.hadoop.hdfs.server.datanode;
 
 import com.google.protobuf.ByteString;
-import javax.crypto.SecretKey;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.net.*;
@@ -88,7 +87,7 @@ public class TestDataXceiverBackwardsCompat {
       doReturn(pair).when(saslClient).socketSend(
           any(Socket.class), any(OutputStream.class), any(InputStream.class),
           any(DataEncryptionKeyFactory.class), any(Token.class),
-          any(DatanodeID.class), any(SecretKey.class));
+          any(DatanodeID.class));
       doReturn(mock(ReplicaHandler.class)).when(data).createTemporary(
           any(StorageType.class), any(String.class), any(ExtendedBlock.class),
           anyBoolean());

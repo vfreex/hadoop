@@ -54,7 +54,6 @@ import org.apache.hadoop.hdfs.web.resources.CreateParentParam;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DestinationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
-import org.apache.hadoop.hdfs.web.resources.ECPolicyParam;
 import org.apache.hadoop.hdfs.web.resources.ExcludeDatanodesParam;
 import org.apache.hadoop.hdfs.web.resources.FsActionParam;
 import org.apache.hadoop.hdfs.web.resources.GetOpParam;
@@ -216,8 +215,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
       final ExcludeDatanodesParam exclDatanodes,
       final CreateFlagParam createFlagParam,
       final NoRedirectParam noredirectParam,
-      final StoragePolicyParam policyName,
-      final ECPolicyParam ecpolicy
+      final StoragePolicyParam policyName
   ) throws IOException, URISyntaxException {
 
     switch(op.getValue()) {
@@ -254,8 +252,6 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
     case RENAMESNAPSHOT:
     case DISALLOWSNAPSHOT:
     case SETSTORAGEPOLICY:
-    case ENABLEECPOLICY:
-    case DISABLEECPOLICY:
     {
       // Whitelist operations that can handled by NamenodeWebHdfsMethods
       return super.put(ugi, delegation, username, doAsUser, fullpath, op,
@@ -264,7 +260,7 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
           accessTime, renameOptions, createParent, delegationTokenArgument,
           aclPermission, xattrName, xattrValue, xattrSetFlag, snapshotName,
           oldSnapshotName, exclDatanodes, createFlagParam, noredirectParam,
-          policyName, ecpolicy);
+          policyName);
     }
     default:
       throw new UnsupportedOperationException(op + " is not supported");
@@ -476,13 +472,11 @@ public class RouterWebHdfsMethods extends NamenodeWebHdfsMethods {
             (HttpURLConnection)connectionFactory.openConnection(url);
         conn.setRequestMethod(method);
 
-        connectionFactory.destroy();
         return conn;
       } catch (Exception e) {
         LOG.error("Cannot redirect request to {}", namenode, e);
       }
     }
-    connectionFactory.destroy();
     return null;
   }
 

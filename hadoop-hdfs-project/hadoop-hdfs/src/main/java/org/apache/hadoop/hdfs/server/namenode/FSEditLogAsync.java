@@ -24,9 +24,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -147,68 +145,15 @@ class FSEditLogAsync extends FSEditLog implements Runnable {
     edit.logSyncWait();
   }
 
-  // draining permits is intended to provide a high priority reservation.
-  // however, release of outstanding permits must be postponed until
-  // drained permits are restored to avoid starvation.  logic has some races
-  // but is good enough to serve its purpose.
-  private Semaphore overflowMutex = new Semaphore(8){
-    private AtomicBoolean draining = new AtomicBoolean();
-    private AtomicInteger pendingReleases = new AtomicInteger();
-    @Override
-    public int drainPermits() {
-      draining.set(true);
-      return super.drainPermits();
-    }
-    // while draining, count the releases until release(int)
-    private void tryRelease(int permits) {
-      pendingReleases.getAndAdd(permits);
-      if (!draining.get()) {
-        super.release(pendingReleases.getAndSet(0));
-      }
-    }
-    @Override
-    public void release() {
-      tryRelease(1);
-    }
-    @Override
-    public void release(int permits) {
-      draining.set(false);
-      tryRelease(permits);
-    }
-  };
-
   private void enqueueEdit(Edit edit) {
     if (LOG.isDebugEnabled()) {
       LOG.debug("logEdit " + edit);
     }
     try {
-      // not checking for overflow yet to avoid penalizing performance of
-      // the common case.  if there is persistent overflow, a mutex will be
-      // use to throttle contention on the queue.
-      if (!editPendingQ.offer(edit)) {
+      if (!editPendingQ.offer(edit, 1, TimeUnit.SECONDS)) {
         Preconditions.checkState(
             isSyncThreadAlive(), "sync thread is not alive");
-        if (Thread.holdsLock(this)) {
-          // if queue is full, synchronized caller must immediately relinquish
-          // the monitor before re-offering to avoid deadlock with sync thread
-          // which needs the monitor to write transactions.
-          int permits = overflowMutex.drainPermits();
-          try {
-            do {
-              this.wait(1000); // will be notified by next logSync.
-            } while (!editPendingQ.offer(edit));
-          } finally {
-            overflowMutex.release(permits);
-          }
-        } else {
-          // mutex will throttle contention during persistent overflow.
-          overflowMutex.acquire();
-          try {
-            editPendingQ.put(edit);
-          } finally {
-            overflowMutex.release();
-          }
-        }
+        editPendingQ.put(edit);
       }
     } catch (Throwable t) {
       // should never happen!  failure to enqueue an edit is fatal

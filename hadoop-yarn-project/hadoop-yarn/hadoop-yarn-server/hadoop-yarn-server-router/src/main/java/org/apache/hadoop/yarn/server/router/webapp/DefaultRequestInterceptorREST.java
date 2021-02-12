@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -102,13 +101,6 @@ public class DefaultRequestInterceptorREST
     return RouterWebServiceUtil.genericForward(webAppAddress, null,
         ClusterInfo.class, HTTPMethods.GET,
         RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.INFO, null, null);
-  }
-
-  @Override
-  public ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr) {
-    return RouterWebServiceUtil.genericForward(webAppAddress, hsr,
-            ClusterUserInfo.class, HTTPMethods.GET,
-            RMWSConsts.RM_WEB_SERVICE_PATH + RMWSConsts.CLUSTER_USER_INFO, null, null);
   }
 
   @Override

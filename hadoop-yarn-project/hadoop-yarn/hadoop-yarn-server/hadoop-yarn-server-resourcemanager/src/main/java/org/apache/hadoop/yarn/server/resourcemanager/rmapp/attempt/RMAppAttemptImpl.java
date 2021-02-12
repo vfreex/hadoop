@@ -176,8 +176,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
   private long finishTime = 0;
   private long launchAMStartTime = 0;
   private long launchAMEndTime = 0;
-  private long scheduledTime = 0;
-  private long containerAllocatedTime = 0;
 
   // Set to null initially. Will eventually get set
   // if an RMAppAttemptUnregistrationEvent occurs
@@ -439,11 +437,9 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
           RMAppAttemptState.FAILED,
           EnumSet.of(
               RMAppAttemptEventType.LAUNCHED,
-              RMAppAttemptEventType.LAUNCH_FAILED,
               RMAppAttemptEventType.EXPIRE,
               RMAppAttemptEventType.KILL,
               RMAppAttemptEventType.FAIL,
-              RMAppAttemptEventType.REGISTERED,
               RMAppAttemptEventType.UNREGISTERED,
               RMAppAttemptEventType.STATUS_UPDATE,
               RMAppAttemptEventType.CONTAINER_ALLOCATED))
@@ -991,8 +987,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         .updateAggregateAppResourceUsage(attemptState.getResourceSecondsMap());
     this.attemptMetrics.updateAggregatePreemptedAppResourceUsage(
         attemptState.getPreemptedResourceSecondsMap());
-    this.attemptMetrics.setTotalAllocatedContainers(
-        attemptState.getTotalAllocatedContainers());
   }
 
   public void transferStateFromAttempt(RMAppAttempt attempt) {
@@ -1174,7 +1168,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             && amContainerAllocation.getContainers() != null) {
           assert (amContainerAllocation.getContainers().size() == 0);
         }
-        appAttempt.scheduledTime = System.currentTimeMillis();
         return RMAppAttemptState.SCHEDULED;
       } else {
         // save state and then go to LAUNCHED state
@@ -1210,16 +1203,10 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
       }
 
       // Set the masterContainer
-      Container amContainer = amContainerAllocation.getContainers().get(0);
+      appAttempt.setMasterContainer(amContainerAllocation.getContainers()
+          .get(0));
       RMContainerImpl rmMasterContainer = (RMContainerImpl)appAttempt.scheduler
-          .getRMContainer(amContainer.getId());
-      //while one NM is removed, the scheduler will clean the container,the
-      //following CONTAINER_FINISHED event will handle the cleaned container.
-      //so just return RMAppAttemptState.SCHEDULED
-      if (rmMasterContainer == null) {
-        return RMAppAttemptState.SCHEDULED;
-      }
-      appAttempt.setMasterContainer(amContainer);
+          .getRMContainer(appAttempt.getMasterContainer().getId());
       rmMasterContainer.setAMContainer(true);
       // The node set in NMTokenSecrentManager is used for marking whether the
       // NMToken has been issued for this node to the AM.
@@ -1231,11 +1218,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
         .clearNodeSetForAttempt(appAttempt.applicationAttemptId);
       appAttempt.getSubmissionContext().setResource(
         appAttempt.getMasterContainer().getResource());
-      appAttempt.containerAllocatedTime = System.currentTimeMillis();
-      long allocationDelay =
-          appAttempt.containerAllocatedTime - appAttempt.scheduledTime;
-      ClusterMetrics.getMetrics().addAMContainerAllocationDelay(
-          allocationDelay);
       appAttempt.storeAttempt();
       return RMAppAttemptState.ALLOCATED_SAVING;
     }
@@ -1426,8 +1408,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             rmStore.getCredentialsFromAppAttempt(this), startTime,
             stateToBeStored, finalTrackingUrl, diags.toString(), finalStatus, exitStatus,
             getFinishTime(), resUsage.getResourceUsageSecondsMap(),
-            this.attemptMetrics.getPreemptedResourceSecondsMap(),
-            this.attemptMetrics.getTotalAllocatedContainers());
+            this.attemptMetrics.getPreemptedResourceSecondsMap());
     LOG.info("Updating application attempt " + applicationAttemptId
         + " with final state: " + targetedFinalState + ", and exit status: "
         + exitStatus);
@@ -1519,8 +1500,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
               && !appAttempt.submissionContext.getUnmanagedAM()) {
             int numberOfFailure = ((RMAppImpl)appAttempt.rmApp)
                 .getNumFailedAppAttempts();
-            if (appAttempt.rmApp.getMaxAppAttempts() > 1
-                && numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
+            if (numberOfFailure < appAttempt.rmApp.getMaxAppAttempts()) {
               keepContainersAcrossAppAttempts = true;
             }
           }
@@ -1577,9 +1557,7 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
             appAttempt.launchAMStartTime;
         ClusterMetrics.getMetrics().addAMLaunchDelay(delay);
       }
-      appAttempt.eventHandler.handle(
-          new RMAppEvent(appAttempt.getAppAttemptId().getApplicationId(),
-            RMAppEventType.ATTEMPT_LAUNCHED, event.getTimestamp()));
+
       appAttempt
           .updateAMLaunchDiagnostics(AMState.LAUNCHED.getDiagnosticMessage());
       // Register with AMLivelinessMonitor
@@ -1842,27 +1820,6 @@ public class RMAppAttemptImpl implements RMAppAttempt, Recoverable {
 
       // Update progress
       appAttempt.progress = statusUpdateEvent.getProgress();
-
-      // Update tracking url if changed and save it to state store
-      String newTrackingUrl = statusUpdateEvent.getTrackingUrl();
-      if (newTrackingUrl != null &&
-          !newTrackingUrl.equals(appAttempt.originalTrackingUrl)) {
-        appAttempt.originalTrackingUrl = newTrackingUrl;
-        ApplicationAttemptStateData attemptState = ApplicationAttemptStateData
-            .newInstance(appAttempt.applicationAttemptId,
-                appAttempt.getMasterContainer(),
-                appAttempt.rmContext.getStateStore()
-                    .getCredentialsFromAppAttempt(appAttempt),
-                appAttempt.startTime, appAttempt.recoveredFinalState,
-                newTrackingUrl, appAttempt.getDiagnostics(), null,
-                ContainerExitStatus.INVALID, appAttempt.getFinishTime(),
-                appAttempt.attemptMetrics.getAggregateAppResourceUsage()
-                    .getResourceUsageSecondsMap(),
-                appAttempt.attemptMetrics.getPreemptedResourceSecondsMap(),
-                appAttempt.attemptMetrics.getTotalAllocatedContainers());
-        appAttempt.rmContext.getStateStore()
-            .updateApplicationAttemptState(attemptState);
-      }
 
       // Ping to AMLivelinessMonitor
       appAttempt.rmContext.getAMLivelinessMonitor().receivedPing(

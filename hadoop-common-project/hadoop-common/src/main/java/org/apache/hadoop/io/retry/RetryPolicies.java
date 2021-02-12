@@ -34,12 +34,10 @@ import java.util.concurrent.TimeUnit;
 
 import javax.security.sasl.SaslException;
 
-import org.apache.hadoop.ipc.ObserverRetryOnActiveException;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.RetriableException;
 import org.apache.hadoop.ipc.StandbyException;
 import org.apache.hadoop.net.ConnectTimeoutException;
-import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.ietf.jgss.GSSException;
 
@@ -679,7 +677,7 @@ public class RetryPolicies {
           e instanceof UnknownHostException ||
           e instanceof StandbyException ||
           e instanceof ConnectTimeoutException ||
-          shouldFailoverOnException(e)) {
+          isWrappedStandbyException(e)) {
         return new RetryAction(RetryAction.RetryDecision.FAILOVER_AND_RETRY,
             getFailoverOrRetrySleepTime(failovers));
       } else if (e instanceof RetriableException
@@ -690,10 +688,6 @@ public class RetryPolicies {
       } else if (e instanceof InvalidToken) {
         return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
             "Invalid or Cancelled Token");
-      } else if (e instanceof AccessControlException ||
-              hasWrappedAccessControlException(e)) {
-        return new RetryAction(RetryAction.RetryDecision.FAIL, 0,
-            "Access denied");
       } else if (e instanceof SocketException
           || (e instanceof IOException && !(e instanceof RemoteException))) {
         if (isIdempotentOrAtMostOnce) {
@@ -731,13 +725,12 @@ public class RetryPolicies {
     return calculateExponentialTime(time, retries, Long.MAX_VALUE);
   }
 
-  private static boolean shouldFailoverOnException(Exception e) {
+  private static boolean isWrappedStandbyException(Exception e) {
     if (!(e instanceof RemoteException)) {
       return false;
     }
     Exception unwrapped = ((RemoteException)e).unwrapRemoteException(
-        StandbyException.class,
-        ObserverRetryOnActiveException.class);
+        StandbyException.class);
     return unwrapped instanceof StandbyException;
   }
 
@@ -761,14 +754,5 @@ public class RetryPolicies {
         RetriableException.class);
     return unwrapped instanceof RetriableException ? 
         (RetriableException) unwrapped : null;
-  }
-
-  private static boolean hasWrappedAccessControlException(Exception e) {
-    Throwable throwable = e;
-    while (!(throwable instanceof AccessControlException) &&
-        throwable.getCause() != null) {
-      throwable = throwable.getCause();
-    }
-    return throwable instanceof AccessControlException;
   }
 }

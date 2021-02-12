@@ -109,20 +109,10 @@ public class RMServerUtils {
       EnumSet<NodeState> acceptedStates) {
     // nodes contains nodes that are NEW, RUNNING, UNHEALTHY or DECOMMISSIONING.
     ArrayList<RMNode> results = new ArrayList<RMNode>();
-    boolean hasActive = false;
-    boolean hasInactive = false;
-    for (NodeState nodeState : acceptedStates) {
-      if (!hasInactive && nodeState.isInactiveState()) {
-        hasInactive = true;
-      }
-      if (!hasActive && nodeState.isActiveState()) {
-        hasActive = true;
-      }
-      if (hasActive && hasInactive) {
-        break;
-      }
-    }
-    if (hasActive) {
+    if (acceptedStates.contains(NodeState.NEW) ||
+        acceptedStates.contains(NodeState.RUNNING) ||
+        acceptedStates.contains(NodeState.DECOMMISSIONING) ||
+        acceptedStates.contains(NodeState.UNHEALTHY)) {
       for (RMNode rmNode : context.getRMNodes().values()) {
         if (acceptedStates.contains(rmNode.getState())) {
           results.add(rmNode);
@@ -131,7 +121,9 @@ public class RMServerUtils {
     }
 
     // inactiveNodes contains nodes that are DECOMMISSIONED, LOST, OR REBOOTED
-    if (hasInactive) {
+    if (acceptedStates.contains(NodeState.DECOMMISSIONED) ||
+        acceptedStates.contains(NodeState.LOST) ||
+        acceptedStates.contains(NodeState.REBOOTED)) {
       for (RMNode rmNode : context.getInactiveRMNodes().values()) {
         if ((rmNode != null) && acceptedStates.contains(rmNode.getState())) {
           results.add(rmNode);

@@ -22,6 +22,11 @@ import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
+import java.security.GeneralSecurityException;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
@@ -31,6 +36,7 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authentication.client.AuthenticatedURL;
 import org.apache.hadoop.security.authentication.client.AuthenticationException;
 import org.apache.hadoop.security.authentication.client.ConnectionConfigurator;
+import org.apache.hadoop.security.ssl.SSLFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,7 +103,7 @@ public class URLConnectionFactory {
       final int connectTimeout, final int readTimeout, Configuration conf) {
     ConnectionConfigurator conn;
     try {
-      conn = new SSLConnectionConfigurator(connectTimeout, readTimeout, conf);
+      conn = newSslConnConfigurator(connectTimeout, readTimeout, conf);
     } catch (Exception e) {
       LOG.warn(
           "Cannot load customized ssl related configuration. Fallback to" +
@@ -133,7 +139,7 @@ public class URLConnectionFactory {
     ConnectionConfigurator conn;
     try {
       ConnectionConfigurator sslConnConfigurator
-          = new SSLConnectionConfigurator(connectTimeout, readTimeout, conf);
+          = newSslConnConfigurator(connectTimeout, readTimeout, conf);
 
       conn = new OAuth2ConnectionConfigurator(conf, sslConnConfigurator);
     } catch (Exception e) {
@@ -145,6 +151,33 @@ public class URLConnectionFactory {
   @VisibleForTesting
   URLConnectionFactory(ConnectionConfigurator connConfigurator) {
     this.connConfigurator = connConfigurator;
+  }
+
+  private static ConnectionConfigurator newSslConnConfigurator(
+      final int connectTimeout, final int readTimeout, Configuration conf)
+      throws IOException, GeneralSecurityException {
+    final SSLFactory factory;
+    final SSLSocketFactory sf;
+    final HostnameVerifier hv;
+
+    factory = new SSLFactory(SSLFactory.Mode.CLIENT, conf);
+    factory.init();
+    sf = factory.createSSLSocketFactory();
+    hv = factory.getHostnameVerifier();
+
+    return new ConnectionConfigurator() {
+      @Override
+      public HttpURLConnection configure(HttpURLConnection conn)
+          throws IOException {
+        if (conn instanceof HttpsURLConnection) {
+          HttpsURLConnection c = (HttpsURLConnection) conn;
+          c.setSSLSocketFactory(sf);
+          c.setHostnameVerifier(hv);
+        }
+        URLConnectionFactory.setTimeouts(conn, connectTimeout, readTimeout);
+        return conn;
+      }
+    };
   }
 
   /**
@@ -208,11 +241,5 @@ public class URLConnectionFactory {
                                   int readTimeout) {
     connection.setConnectTimeout(connectTimeout);
     connection.setReadTimeout(readTimeout);
-  }
-
-  public void destroy() {
-    if (connConfigurator instanceof SSLConnectionConfigurator) {
-      ((SSLConnectionConfigurator) connConfigurator).destroy();
-    }
   }
 }

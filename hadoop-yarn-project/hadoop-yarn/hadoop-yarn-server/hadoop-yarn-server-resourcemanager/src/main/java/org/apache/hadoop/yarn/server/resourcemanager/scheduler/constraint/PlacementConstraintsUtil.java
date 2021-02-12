@@ -149,10 +149,7 @@ public final class PlacementConstraintsUtil {
       } else if (currentExp.getTargetType().equals(TargetType.NODE_ATTRIBUTE)
           && currentExp.getTargetKey().equals(NODE_PARTITION)) {
         // This is a node partition expression, check it.
-        if (!canSatisfyNodePartitionConstraintExpresssion(currentExp,
-            schedulerNode)) {
-          return false;
-        }
+        canSatisfyNodePartitionConstraintExpresssion(currentExp, schedulerNode);
       }
     }
     // return true if all targetExpressions are satisfied

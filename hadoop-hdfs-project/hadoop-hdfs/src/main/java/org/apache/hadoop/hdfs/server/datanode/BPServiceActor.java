@@ -105,7 +105,6 @@ class BPServiceActor implements Runnable {
   private final DataNode dn;
   private final DNConf dnConf;
   private long prevBlockReportId;
-  private long fullBlockReportLeaseId;
   private final SortedSet<Integer> blockReportSizes =
       Collections.synchronizedSortedSet(new TreeSet<>());
   private final int maxDataLength;
@@ -130,7 +129,6 @@ class BPServiceActor implements Runnable {
         dnConf.ibrInterval,
         dn.getMetrics());
     prevBlockReportId = ThreadLocalRandom.current().nextLong();
-    fullBlockReportLeaseId = 0;
     scheduler = new Scheduler(dnConf.heartBeatInterval,
         dnConf.getLifelineIntervalMs(), dnConf.blockReportInterval,
         dnConf.outliersReportIntervalMs);
@@ -618,6 +616,7 @@ class BPServiceActor implements Runnable {
         + "; heartBeatInterval=" + dnConf.heartBeatInterval
         + (lifelineSender != null ?
             "; lifelineIntervalMs=" + dnConf.getLifelineIntervalMs() : ""));
+    long fullBlockReportLeaseId = 0;
 
     //
     // Now loop for a long time....
@@ -683,8 +682,7 @@ class BPServiceActor implements Runnable {
             }
           }
         }
-        if (!dn.areIBRDisabledForTests() &&
-            (ibrManager.sendImmediately()|| sendHeartbeat)) {
+        if (ibrManager.sendImmediately() || sendHeartbeat) {
           ibrManager.sendIBRs(bpNamenode, bpRegistration,
               bpos.getBlockPoolId());
         }
@@ -774,24 +772,15 @@ class BPServiceActor implements Runnable {
       } catch(EOFException e) {  // namenode might have just restarted
         LOG.info("Problem connecting to server: " + nnAddr + " :"
             + e.getLocalizedMessage());
+        sleepAndLogInterrupts(1000, "connecting to server");
       } catch(SocketTimeoutException e) {  // namenode is busy
         LOG.info("Problem connecting to server: " + nnAddr);
-      } catch(RemoteException e) {
-        LOG.warn("RemoteException in register", e);
-        throw e;
-      } catch(IOException e) {
-        LOG.warn("Problem connecting to server: " + nnAddr);
+        sleepAndLogInterrupts(1000, "connecting to server");
       }
-      // Try again in a second
-      sleepAndLogInterrupts(1000, "connecting to server");
     }
     
     LOG.info("Block pool " + this + " successfully registered with NN");
     bpos.registrationSucceeded(this, bpRegistration);
-
-    // reset lease id whenever registered to NN.
-    // ask for a new lease id at the next heartbeat.
-    fullBlockReportLeaseId = 0;
 
     // random short delay - helps scatter the BR from all DNs
     scheduler.scheduleBlockReport(dnConf.initialBlockReportDelayMs);
@@ -886,15 +875,6 @@ class BPServiceActor implements Runnable {
           if (bpos.processCommandFromActor(cmd, this) == false) {
             return false;
           }
-        } catch (RemoteException re) {
-          String reClass = re.getClassName();
-          if (UnregisteredNodeException.class.getName().equals(reClass) ||
-              DisallowedDatanodeException.class.getName().equals(reClass) ||
-              IncorrectVersionException.class.getName().equals(reClass)) {
-            LOG.warn(this + " is shutting down", re);
-            shouldServiceRun = false;
-            return false;
-          }
         } catch (IOException ioe) {
           LOG.warn("Error processing datanode Command", ioe);
         }
@@ -924,7 +904,7 @@ class BPServiceActor implements Runnable {
       scheduler.scheduleHeartbeat();
       // HDFS-9917,Standby NN IBR can be very huge if standby namenode is down
       // for sometime.
-      if (state == HAServiceState.STANDBY || state == HAServiceState.OBSERVER) {
+      if (state == HAServiceState.STANDBY) {
         ibrManager.clearIBRs();
       }
     }

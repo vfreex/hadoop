@@ -20,7 +20,6 @@ package org.apache.hadoop.fs.aliyun.oss;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileContext;
 import org.junit.internal.AssumptionViolatedException;
 
 import java.io.IOException;
@@ -46,21 +45,10 @@ public final class AliyunOSSTestUtils {
    */
   public static AliyunOSSFileSystem createTestFileSystem(Configuration conf)
       throws IOException {
-    AliyunOSSFileSystem ossfs = new AliyunOSSFileSystem();
-    ossfs.initialize(getURI(conf), conf);
-    return ossfs;
-  }
-
-  public static FileContext createTestFileContext(Configuration conf) throws
-      IOException {
-    return FileContext.getFileContext(getURI(conf), conf);
-  }
-
-  private static URI getURI(Configuration conf) {
     String fsname = conf.getTrimmed(
         TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME, "");
 
-    boolean liveTest = !StringUtils.isEmpty(fsname);
+    boolean liveTest = StringUtils.isNotEmpty(fsname);
     URI testURI = null;
     if (liveTest) {
       testURI = URI.create(fsname);
@@ -71,8 +59,11 @@ public final class AliyunOSSTestUtils {
       throw new AssumptionViolatedException("No test filesystem in "
           + TestAliyunOSSFileSystemContract.TEST_FS_OSS_NAME);
     }
-    return testURI;
+    AliyunOSSFileSystem ossfs = new AliyunOSSFileSystem();
+    ossfs.initialize(testURI, conf);
+    return ossfs;
   }
+
   /**
    * Generate unique test path for multiple user tests.
    *

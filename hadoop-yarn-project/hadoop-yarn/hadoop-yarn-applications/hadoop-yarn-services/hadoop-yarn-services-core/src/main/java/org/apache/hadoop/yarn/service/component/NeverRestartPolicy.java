@@ -59,14 +59,11 @@ public final class NeverRestartPolicy implements ComponentRestartPolicy {
     return false;
   }
 
-  @Override public boolean isReadyForDownStream(Component dependentComponent) {
-    if (dependentComponent.getNumReadyInstances()
-        + dependentComponent.getNumSucceededInstances()
-        + dependentComponent.getNumFailedInstances()
-        < dependentComponent.getNumDesiredInstances()) {
-      return false;
+  @Override public boolean isReadyForDownStream(Component component) {
+    if (hasCompleted(component)) {
+      return true;
     }
-    return true;
+    return false;
   }
 
   @Override public boolean allowUpgrades() {
@@ -81,10 +78,5 @@ public final class NeverRestartPolicy implements ComponentRestartPolicy {
       return false;
     }
     return true;
-  }
-
-  @Override public boolean allowContainerRetriesForInstance(
-      ComponentInstance componentInstance) {
-    return false;
   }
 }

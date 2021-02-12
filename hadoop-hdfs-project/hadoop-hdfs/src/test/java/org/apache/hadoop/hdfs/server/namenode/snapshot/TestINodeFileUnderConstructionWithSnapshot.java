@@ -304,8 +304,7 @@ public class TestINodeFileUnderConstructionWithSnapshot {
       }
     } finally {
       NameNodeAdapter.setLeasePeriod(fsn, HdfsConstants.LEASE_SOFTLIMIT_PERIOD,
-          conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
-              DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT) * 1000);
+          HdfsConstants.LEASE_HARDLIMIT_PERIOD);
     }
   }
 }

@@ -22,6 +22,5 @@ public enum ComponentState {
   INIT,
   FLEXING,
   STABLE,
-  UPGRADING,
-  CANCEL_UPGRADING
+  UPGRADING
 }

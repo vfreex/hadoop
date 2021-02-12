@@ -1184,7 +1184,7 @@ class DataStreamer extends Daemon {
 
             one.releaseBuffer(byteArrayManager);
           }
-        } catch (Throwable e) {
+        } catch (Exception e) {
           if (!responderClosed) {
             lastException.set(e);
             errorState.setInternalError();
@@ -1781,7 +1781,6 @@ class DataStreamer extends Daemon {
         blockStream = out;
         result =  true; // success
         errorState.resetInternalError();
-        lastException.clear();
         // remove all restarting nodes from failed nodes list
         failed.removeAll(restartingNodes);
         restartingNodes.clear();

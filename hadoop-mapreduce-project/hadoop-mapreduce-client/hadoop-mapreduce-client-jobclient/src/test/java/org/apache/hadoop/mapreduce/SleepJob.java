@@ -49,8 +49,6 @@ public class SleepJob extends Configured implements Tool {
   public static String REDUCE_SLEEP_TIME = 
     "mapreduce.sleepjob.reduce.sleep.time";
 
-  public static final String SLEEP_JOB_NAME = "Sleep job";
-
   public static class SleepJobPartitioner extends 
       Partitioner<IntWritable, NullWritable> {
     public int getPartition(IntWritable k, NullWritable v, int numPartitions) {
@@ -197,17 +195,9 @@ public class SleepJob extends Configured implements Tool {
     System.exit(res);
   }
 
-  public Job createJob(int numMapper, int numReducer,
-      long mapSleepTime, int mapSleepCount,
-      long reduceSleepTime, int reduceSleepCount) throws IOException {
-    return createJob(numMapper, numReducer, mapSleepTime, mapSleepCount,
-        reduceSleepTime, reduceSleepCount, SLEEP_JOB_NAME);
-  }
-
-  public Job createJob(int numMapper, int numReducer,
+  public Job createJob(int numMapper, int numReducer, 
                        long mapSleepTime, int mapSleepCount, 
-                       long reduceSleepTime, int reduceSleepCount,
-                       String name)
+                       long reduceSleepTime, int reduceSleepCount) 
       throws IOException {
     Configuration conf = getConf();
     conf.setLong(MAP_SLEEP_TIME, mapSleepTime);
@@ -215,7 +205,7 @@ public class SleepJob extends Configured implements Tool {
     conf.setInt(MAP_SLEEP_COUNT, mapSleepCount);
     conf.setInt(REDUCE_SLEEP_COUNT, reduceSleepCount);
     conf.setInt(MRJobConfig.NUM_MAPS, numMapper);
-    Job job = Job.getInstance(conf);
+    Job job = Job.getInstance(conf, "sleep");
     job.setNumReduceTasks(numReducer);
     job.setJarByClass(SleepJob.class);
     job.setMapperClass(SleepMapper.class);
@@ -226,11 +216,7 @@ public class SleepJob extends Configured implements Tool {
     job.setInputFormatClass(SleepInputFormat.class);
     job.setPartitionerClass(SleepJobPartitioner.class);
     job.setSpeculativeExecution(false);
-    if (SLEEP_JOB_NAME.equals(name)) {
-      job.setJobName(SLEEP_JOB_NAME);
-    } else {
-      job.setJobName(SLEEP_JOB_NAME + " - " + name);
-    }
+    job.setJobName("Sleep job");
     FileInputFormat.addInputPath(job, new Path("ignored"));
     return job;
   }
@@ -244,7 +230,6 @@ public class SleepJob extends Configured implements Tool {
     int numMapper = 1, numReducer = 1;
     long mapSleepTime = 100, reduceSleepTime = 100, recSleepTime = 100;
     int mapSleepCount = 1, reduceSleepCount = 1;
-    String name = SLEEP_JOB_NAME;
 
     for(int i=0; i < args.length; i++ ) {
       if(args[i].equals("-m")) {
@@ -277,8 +262,6 @@ public class SleepJob extends Configured implements Tool {
         if (recSleepTime < 0) {
           return printUsage(recSleepTime + ": recordSleepTime must be >= 0");
         }
-      } else if (args[i].equals("-name")) {
-        name = args[++i];
       }
     }
     
@@ -286,7 +269,7 @@ public class SleepJob extends Configured implements Tool {
     mapSleepCount = (int)Math.ceil(mapSleepTime / ((double)recSleepTime));
     reduceSleepCount = (int)Math.ceil(reduceSleepTime / ((double)recSleepTime));
     Job job = createJob(numMapper, numReducer, mapSleepTime,
-        mapSleepCount, reduceSleepTime, reduceSleepCount, name);
+                mapSleepCount, reduceSleepTime, reduceSleepCount);
     return job.waitForCompletion(true) ? 0 : 1;
   }
 
@@ -296,7 +279,7 @@ public class SleepJob extends Configured implements Tool {
     }
     System.err.println("SleepJob [-m numMapper] [-r numReducer]" +
         " [-mt mapSleepTime (msec)] [-rt reduceSleepTime (msec)]" +
-        " [-recordt recordSleepTime (msec)] [-name]");
+        " [-recordt recordSleepTime (msec)]");
     ToolRunner.printGenericCommandUsage(System.err);
     return 2;
   }

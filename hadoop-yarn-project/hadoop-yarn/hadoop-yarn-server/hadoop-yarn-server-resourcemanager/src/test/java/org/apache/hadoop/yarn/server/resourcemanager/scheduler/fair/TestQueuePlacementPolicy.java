@@ -20,8 +20,10 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 import static org.junit.Assert.*;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,7 +34,6 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
-import org.apache.hadoop.security.Groups;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -388,10 +389,8 @@ public class TestQueuePlacementPolicy {
     sb.append("  <rule name='default' />");
     sb.append("</queuePlacementPolicy>");
 
-    // change the group resolution
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         PeriodGroupsMapping.class, GroupMappingServiceProvider.class);
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
     // User queue would be created under primary group queue, and the period
     // in the group name should be converted into _dot_
     QueuePlacementPolicy policy = parse(sb.toString());
@@ -400,7 +399,6 @@ public class TestQueuePlacementPolicy {
 
     conf.setClass(CommonConfigurationKeys.HADOOP_SECURITY_GROUP_MAPPING,
         SimpleGroupsMapping.class, GroupMappingServiceProvider.class);
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
   }
 
   @Test(expected=IOException.class)
@@ -414,7 +412,6 @@ public class TestQueuePlacementPolicy {
     // Add a static mapping that returns empty groups for users
     conf.setStrings(CommonConfigurationKeys
         .HADOOP_USER_GROUP_STATIC_OVERRIDES, "emptygroupuser=");
-    Groups.getUserToGroupsMappingServiceWithLoadedConfiguration(conf);
     QueuePlacementPolicy policy = parse(sb.toString());
     policy.assignAppToQueue(null, "emptygroupuser");
   }

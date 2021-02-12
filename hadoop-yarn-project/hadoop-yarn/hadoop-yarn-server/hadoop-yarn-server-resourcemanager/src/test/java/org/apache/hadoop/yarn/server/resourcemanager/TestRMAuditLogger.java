@@ -67,7 +67,6 @@ public class TestRMAuditLogger {
   private static final Resource RESOURCE = mock(Resource.class);
   private static final String CALLER_CONTEXT = "context";
   private static final byte[] CALLER_SIGNATURE = "signature".getBytes();
-  private static final String PARTITION = "label1";
 
   @Before
   public void setUp() throws Exception {
@@ -133,14 +132,6 @@ public class TestRMAuditLogger {
         ApplicationAttemptId attemptId, ContainerId containerId,
         CallerContext callerContext, Resource resource, InetAddress remoteIp,
         RMAuditLogger.ArgsBuilder args) {
-    testSuccessLogFormatHelper(checkIP, appId, attemptId, containerId,
-        callerContext, resource, remoteIp, args, null, null);
-  }
-
-  private void testSuccessLogFormatHelper(boolean checkIP, ApplicationId appId,
-        ApplicationAttemptId attemptId, ContainerId containerId,
-        CallerContext callerContext, Resource resource, InetAddress remoteIp,
-        RMAuditLogger.ArgsBuilder args, String queueName, String partition) {
     String sLog;
     InetAddress tmpIp = checkIP ? remoteIp : null;
     if (args != null) {
@@ -148,8 +139,7 @@ public class TestRMAuditLogger {
           tmpIp, args);
     } else {
       sLog = RMAuditLogger.createSuccessLog(USER, OPERATION, TARGET, appId,
-          attemptId, containerId, resource, callerContext, tmpIp, queueName,
-          partition);
+          attemptId, containerId, resource, callerContext, tmpIp);
     }
     StringBuilder expLog = new StringBuilder();
     expLog.append("USER=test\t");
@@ -187,13 +177,6 @@ public class TestRMAuditLogger {
     if (args != null) {
       expLog.append("\tQUEUENAME=root");
       expLog.append("\tRECURSIVE=true");
-    } else {
-      if (queueName != null) {
-        expLog.append("\tQUEUENAME=" + QUEUE);
-      }
-    }
-    if (partition != null) {
-      expLog.append("\tNODELABEL=" + PARTITION);
     }
     assertEquals(expLog.toString(), sLog);
   }
@@ -275,8 +258,6 @@ public class TestRMAuditLogger {
         .append(Keys.QUEUENAME, QUEUE).append(Keys.RECURSIVE, "true");
     testSuccessLogFormatHelper(checkIP, null, null, null, null, null,
         Server.getRemoteIp(), args);
-    testSuccessLogFormatHelper(checkIP, null, null, null, null, null,
-        Server.getRemoteIp(), null, QUEUE, PARTITION);
     testSuccessLogFormatHelperWithIP(checkIP, APPID, ATTEMPTID, CONTAINERID);
     testSuccessLogNulls(checkIP);
   }
@@ -293,17 +274,16 @@ public class TestRMAuditLogger {
       ApplicationAttemptId attemptId, ContainerId containerId,
       CallerContext callerContext, Resource resource) {
     testFailureLogFormatHelper(checkIP, appId, attemptId, containerId,
-        callerContext, resource, null, null, null);
+        callerContext, resource, null);
   }
 
   private void testFailureLogFormatHelper(boolean checkIP, ApplicationId appId,
         ApplicationAttemptId attemptId, ContainerId containerId,
         CallerContext callerContext, Resource resource,
-        String queueName, String partition, RMAuditLogger.ArgsBuilder args) {
+        RMAuditLogger.ArgsBuilder args) {
     String fLog = args == null ?
       RMAuditLogger.createFailureLog(USER, OPERATION, PERM, TARGET, DESC,
-          appId, attemptId, containerId, resource, callerContext,
-          queueName, partition) :
+          appId, attemptId, containerId, resource, callerContext) :
         RMAuditLogger.createFailureLog(USER, OPERATION, PERM, TARGET, DESC,
             args);
     StringBuilder expLog = new StringBuilder();
@@ -335,12 +315,6 @@ public class TestRMAuditLogger {
         expLog.append("\tCALLERSIGNATURE=signature");
       }
     }
-    if (queueName != null) {
-      expLog.append("\tQUEUENAME=" + QUEUE);
-    }
-    if (partition != null) {
-      expLog.append("\tNODELABEL=" + PARTITION);
-    }
     if (args != null) {
       expLog.append("\tQUEUENAME=root");
       expLog.append("\tRECURSIVE=true");
@@ -371,16 +345,10 @@ public class TestRMAuditLogger {
     testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
         new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
             .build(), RESOURCE);
-    testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
-            .build(), RESOURCE, QUEUE, null, null);
-    testFailureLogFormatHelper(checkIP, APPID, ATTEMPTID, CONTAINERID,
-        new CallerContext.Builder(CALLER_CONTEXT).setSignature(CALLER_SIGNATURE)
-            .build(), RESOURCE, QUEUE, PARTITION, null);
     RMAuditLogger.ArgsBuilder args = new RMAuditLogger.ArgsBuilder()
         .append(Keys.QUEUENAME, QUEUE).append(Keys.RECURSIVE, "true");
     testFailureLogFormatHelper(checkIP, null, null, null, null, null,
-        null, null, args);
+        args);
   }
 
   /**

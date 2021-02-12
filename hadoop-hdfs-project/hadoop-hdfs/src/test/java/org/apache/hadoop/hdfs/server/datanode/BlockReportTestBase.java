@@ -35,10 +35,11 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
@@ -86,7 +87,7 @@ import org.mockito.invocation.InvocationOnMock;
  * and messages.
  */
 public abstract class BlockReportTestBase {
-  public static final Logger LOG = LoggerFactory.getLogger(BlockReportTestBase.class);
+  public static final Log LOG = LogFactory.getLog(BlockReportTestBase.class);
 
   private static short REPL_FACTOR = 1;
   private static final int RAND_LIMIT = 2000;
@@ -318,7 +319,7 @@ public abstract class BlockReportTestBase {
       }
     }
 
-    DataNodeTestUtils.runDirectoryScanner(dn0);
+    waitTil(TimeUnit.SECONDS.toMillis(DN_RESCAN_EXTRA_WAIT));
 
     // all blocks belong to the same file, hence same BP
     String poolId = cluster.getNamesystem().getBlockPoolId();
@@ -878,7 +879,7 @@ public abstract class BlockReportTestBase {
   private static void initLoggers() {
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
     GenericTestUtils.setLogLevel(DataNode.LOG, Level.ALL);
-    GenericTestUtils.setLogLevel(BlockReportTestBase.LOG, org.slf4j.event.Level.DEBUG);
+    GenericTestUtils.setLogLevel(BlockReportTestBase.LOG, Level.ALL);
   }
 
   private Block findBlock(Path path, long size) throws IOException {

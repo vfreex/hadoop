@@ -163,7 +163,6 @@ public class NodeHealthScriptRunner extends AbstractService {
         setHealthStatus(false, exceptionStackTrace);
         break;
       case FAILED_WITH_EXIT_CODE:
-        // see Javadoc above - we don't report bad health intentionally
         setHealthStatus(true, "", now);
         break;
       case FAILED:

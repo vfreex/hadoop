@@ -21,7 +21,7 @@ import com.sun.jersey.api.client.Client;
 import com.sun.jersey.api.client.ClientHandlerException;
 import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
-import com.sun.jersey.api.client.WebResource.Builder;
+import com.sun.jersey.api.client.WebResource;
 import javax.ws.rs.core.MediaType;
 
 import com.sun.jersey.api.json.JSONJAXBContext;
@@ -53,36 +53,16 @@ public final class YarnWebServiceUtils {
   public static JSONObject getNodeInfoFromRMWebService(Configuration conf,
       String nodeId) throws ClientHandlerException,
       UniformInterfaceException {
-    try {
-      return WebAppUtils.execOnActiveRM(conf,
-          YarnWebServiceUtils::getNodeInfoFromRM, nodeId);
-    } catch (Exception e) {
-      if (e instanceof ClientHandlerException) {
-        throw ((ClientHandlerException) e);
-      } else if (e instanceof UniformInterfaceException) {
-        throw ((UniformInterfaceException) e);
-      } else {
-        throw new RuntimeException(e);
-      }
-    }
-  }
-
-  private static JSONObject getNodeInfoFromRM(String webAppAddress,
-      String nodeId) throws ClientHandlerException, UniformInterfaceException {
     Client webServiceClient = Client.create();
-    ClientResponse response = null;
-    try {
-      Builder builder = webServiceClient.resource(webAppAddress)
-          .path("ws").path("v1").path("cluster")
-          .path("nodes").path(nodeId).accept(MediaType.APPLICATION_JSON);
-      response = builder.get(ClientResponse.class);
-      return response.getEntity(JSONObject.class);
-    } finally {
-      if (response != null) {
-        response.close();
-      }
-      webServiceClient.destroy();
-    }
+    String webAppAddress = WebAppUtils.getRMWebAppURLWithScheme(conf);
+
+    WebResource webResource = webServiceClient.resource(webAppAddress);
+
+    ClientResponse response = webResource.path("ws").path("v1")
+        .path("cluster").path("nodes")
+        .path(nodeId).accept(MediaType.APPLICATION_JSON)
+        .get(ClientResponse.class);
+    return response.getEntity(JSONObject.class);
   }
 
   @SuppressWarnings("rawtypes")

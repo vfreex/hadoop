@@ -20,7 +20,6 @@ package org.apache.hadoop.hdfs.server.namenode;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -287,11 +286,6 @@ public class NNThroughputBenchmark implements Tool {
           false);
       if(!keepResults)
         clientProto.delete(getBaseDir(), true);
-      else {
-        clientProto.setSafeMode(HdfsConstants.SafeModeAction.SAFEMODE_ENTER,
-            true);
-        clientProto.saveNamespace(0, 0);
-      }
     }
 
     int getNumOpsExecuted() {
@@ -1524,11 +1518,10 @@ public class NNThroughputBenchmark implements Tool {
         nameNodeProto = DFSTestUtil.getNamenodeProtocolProxy(config, nnUri,
             UserGroupInformation.getCurrentUser());
         clientProto = dfs.getClient().getNamenode();
-        InetSocketAddress nnAddr = DFSUtilClient.getNNAddress(nnUri);
         dataNodeProto = new DatanodeProtocolClientSideTranslatorPB(
-            nnAddr, config);
+            DFSUtilClient.getNNAddress(nnUri), config);
         refreshUserMappingsProto =
-            DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnAddr);
+            DFSTestUtil.getRefreshUserMappingsProtocolProxy(config, nnUri);
         getBlockPoolId(dfs);
       }
       // run each benchmark

@@ -96,14 +96,14 @@ public final class RouterQuotaUsage extends QuotaUsage {
   public String toString() {
     String nsQuota = String.valueOf(getQuota());
     String nsCount = String.valueOf(getFileAndDirectoryCount());
-    if (getQuota() == HdfsConstants.QUOTA_RESET) {
+    if (getQuota() == HdfsConstants.QUOTA_DONT_SET) {
       nsQuota = "-";
       nsCount = "-";
     }
 
     String ssQuota = StringUtils.byteDesc(getSpaceQuota());
     String ssCount = StringUtils.byteDesc(getSpaceConsumed());
-    if (getSpaceQuota() == HdfsConstants.QUOTA_RESET) {
+    if (getSpaceQuota() == HdfsConstants.QUOTA_DONT_SET) {
       ssQuota = "-";
       ssCount = "-";
     }

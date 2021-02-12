@@ -87,9 +87,6 @@ public class TestEditsDoubleBuffer {
   @Test
   public void testDumpEdits() throws IOException {
     final int defaultBufferSize = 256;
-    final int fakeLogVersion =
-        NameNodeLayoutVersion.Feature.ROLLING_UPGRADE
-            .getInfo().getLayoutVersion();
     EditsDoubleBuffer buffer = new EditsDoubleBuffer(defaultBufferSize);
     FSEditLogOp.OpInstanceCache cache = new FSEditLogOp.OpInstanceCache();
 
@@ -101,7 +98,7 @@ public class TestEditsDoubleBuffer {
         .setPath(src)
         .setReplication(replication);
     op.setTransactionId(1);
-    buffer.writeOp(op, fakeLogVersion);
+    buffer.writeOp(op);
 
     src = "/testdumpedits2";
 
@@ -110,13 +107,13 @@ public class TestEditsDoubleBuffer {
             .setPath(src)
             .setTimestamp(0);
     op2.setTransactionId(2);
-    buffer.writeOp(op2, fakeLogVersion);
+    buffer.writeOp(op2);
 
     FSEditLogOp.AllocateBlockIdOp op3 =
         FSEditLogOp.AllocateBlockIdOp.getInstance(cache.get())
             .setBlockId(0);
     op3.setTransactionId(3);
-    buffer.writeOp(op3, fakeLogVersion);
+    buffer.writeOp(op3);
 
     GenericTestUtils.LogCapturer logs =
         GenericTestUtils.LogCapturer.captureLogs(EditsDoubleBuffer.LOG);

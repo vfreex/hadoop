@@ -37,9 +37,9 @@ export default DS.JSONAPISerializer.extend({
           runid: payload.info.SYSTEM_INFO_FLOW_RUN_ID,
           shownid: payload.id,
           type: payload.type,
-          createTime: this.checkDateValidity(payload.createdtime),
+          createTime: Converter.timeStampToDate(payload.createdtime),
           createTimeRaw: payload.createdtime,
-          endTime: this.checkDateValidity(payload.info.SYSTEM_INFO_FLOW_RUN_END_TIME),
+          endTime: Converter.timeStampToDate(payload.info.SYSTEM_INFO_FLOW_RUN_END_TIME),
           endTimeRaw: payload.info.SYSTEM_INFO_FLOW_RUN_END_TIME || 0,
           user: payload.info.SYSTEM_INFO_USER,
           uid: payload.info.UID,
@@ -49,13 +49,6 @@ export default DS.JSONAPISerializer.extend({
       };
 
       return this._super(store, primaryModelClass, fixedPayload, id, requestType);
-    },
-
-    checkDateValidity(timestamp) {
-      if (timestamp && timestamp > 0) {
-        return Converter.timeStampToDate(timestamp);
-      }
-      return 'N/A';
     },
 
     normalizeArrayResponse(store, primaryModelClass, payload, id, requestType) {

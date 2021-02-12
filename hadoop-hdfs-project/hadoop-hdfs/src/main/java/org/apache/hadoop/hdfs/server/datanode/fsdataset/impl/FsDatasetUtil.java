@@ -26,13 +26,7 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
-import java.nio.ByteBuffer;
-import java.nio.channels.Channels;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 
 import com.google.common.base.Preconditions;
@@ -46,7 +40,6 @@ import org.apache.hadoop.hdfs.server.datanode.FinalizedReplica;
 import org.apache.hadoop.hdfs.server.datanode.ReplicaInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.DataChecksum;
-import org.apache.htrace.shaded.fasterxml.jackson.databind.util.ByteBufferBackedInputStream;
 
 /** Utility methods. */
 @InterfaceAudience.Private
@@ -123,59 +116,22 @@ public class FsDatasetUtil {
     }
   }
 
-  public static InputStream getInputStreamAndSeek(File file, long offset)
-      throws IOException {
-    RandomAccessFile raf = null;
-    try {
-      raf = new RandomAccessFile(file, "r");
-      raf.seek(offset);
-      return Channels.newInputStream(raf.getChannel());
-    } catch(IOException ioe) {
-      IOUtils.cleanupWithLogger(null, raf);
-      throw ioe;
-    }
-  }
-
-  public static InputStream getDirectInputStream(long addr, long length)
-      throws IOException {
-    try {
-      Class<?> directByteBufferClass =
-          Class.forName("java.nio.DirectByteBuffer");
-      Constructor<?> constructor =
-          directByteBufferClass.getDeclaredConstructor(long.class, int.class);
-      constructor.setAccessible(true);
-      ByteBuffer byteBuffer =
-          (ByteBuffer) constructor.newInstance(addr, (int)length);
-      return new ByteBufferBackedInputStream(byteBuffer);
-    } catch (ClassNotFoundException | NoSuchMethodException |
-        IllegalAccessException | InvocationTargetException |
-        InstantiationException e) {
-      throw new IOException(e);
-    }
-  }
-
   /**
-   * Find the meta-file for the specified block file and then return the
-   * generation stamp from the name of the meta-file. Generally meta file will
-   * be the next file in sorted array of file's.
-   *
-   * @param listdir
-   *          sorted list of file based on name.
-   * @param blockFile
-   *          block file for which generation stamp is needed.
-   * @param index
-   *          index of block file in array.
-   * @return generation stamp for block file.
+   * Find the meta-file for the specified block file
+   * and then return the generation stamp from the name of the meta-file.
    */
-  static long getGenerationStampFromFile(File[] listdir, File blockFile,
-      int index) {
+  static long getGenerationStampFromFile(File[] listdir, File blockFile)
+      throws IOException {
     String blockName = blockFile.getName();
-    if ((index + 1) < listdir.length) {
-      // Check if next index file is meta file
-      String metaFile = listdir[index + 1].getName();
-      if (metaFile.startsWith(blockName)) {
-        return Block.getGenerationStamp(metaFile);
+    for (int j = 0; j < listdir.length; j++) {
+      String path = listdir[j].getName();
+      if (!path.startsWith(blockName)) {
+        continue;
       }
+      if (blockFile.getCanonicalPath().equals(listdir[j].getCanonicalPath())) {
+        continue;
+      }
+      return Block.getGenerationStamp(listdir[j].getName());
     }
     FsDatasetImpl.LOG.warn("Block " + blockFile + " does not have a metafile!");
     return HdfsConstants.GRANDFATHER_GENERATION_STAMP;
@@ -220,16 +176,5 @@ public class FsDatasetUtil {
     };
 
     FsDatasetImpl.computeChecksum(wrapper, dstMeta, smallBufferSize, conf);
-  }
-
-  public static void deleteMappedFile(String filePath) throws IOException {
-    if (filePath == null) {
-      throw new IOException("The filePath should not be null!");
-    }
-    boolean result = Files.deleteIfExists(Paths.get(filePath));
-    if (!result) {
-      throw new IOException(
-          "Failed to delete the mapped file: " + filePath);
-    }
   }
 }

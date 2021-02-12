@@ -20,10 +20,8 @@ import Ember from 'ember';
 import Constants from 'yarn-ui/constants';
 
 export default Ember.Controller.extend({
-  queryParams: ["service", "attempt", "containerid"],
+  queryParams: ["service"],
   service: undefined,
-  attempt: undefined,
-  containerid: undefined,
 
   selectedAttemptId: "",
   attemptContainerList: null,
@@ -42,7 +40,7 @@ export default Ember.Controller.extend({
   },
 
   actions: {
-    showContainersForAttemptId(attemptId, containerId = "") {
+    showContainersForAttemptId(attemptId) {
       this.set("selectedAttemptId", "");
       if (attemptId) {
         this.set("_isLoadingTopPanel", true);
@@ -77,9 +75,6 @@ export default Ember.Controller.extend({
             }
             this.set("attemptContainerList", containers);
             this.initializeSelect(".js-fetch-logs-containers");
-            if (containerId) {
-              this.send("showLogFilesForContainerId", containerId);
-            }
           })
           .finally(() => {
             this.set("_isLoadingTopPanel", false);
@@ -258,17 +253,5 @@ export default Ember.Controller.extend({
       }
       return lines.slice(lines.length - 10).join("\n");
     }
-  ),
-
-  isLogAggregationNotSucceeded: Ember.computed("model.app", function() {
-    const logAggregationStatus = this.get("model.app.logAggregationStatus");
-    return logAggregationStatus !== "SUCCEEDED";
-  }),
-
-  isTimelineUnHealthy: function() {
-      if (this.model && this.model.timelineHealth) {
-        return this.model.timelineHealth.get('isTimelineUnHealthy');
-      }
-      return true;
-    }.property('model.timelineHealth')
+  )
 });

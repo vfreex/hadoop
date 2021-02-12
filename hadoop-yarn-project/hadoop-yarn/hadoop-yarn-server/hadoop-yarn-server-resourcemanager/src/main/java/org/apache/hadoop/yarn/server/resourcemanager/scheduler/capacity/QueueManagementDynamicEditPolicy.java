@@ -19,9 +19,8 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 
 
 import com.google.common.annotations.VisibleForTesting;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -51,8 +50,8 @@ import java.util.Set;
  */
 public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
 
-  private static final Logger LOG =
-      LoggerFactory.getLogger(QueueManagementDynamicEditPolicy.class);
+  private static final Log LOG =
+      LogFactory.getLog(QueueManagementDynamicEditPolicy.class);
 
   private Clock clock;
 
@@ -91,7 +90,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
   @Override
   public void init(final Configuration config, final RMContext context,
       final ResourceScheduler sched) {
-    LOG.info("Queue Management Policy monitor: {}" + this.
+    LOG.info("Queue Management Policy monitor:" + this.
         getClass().getCanonicalName());
     assert null == scheduler : "Unexpected duplicate call to init";
     if (!(sched instanceof CapacityScheduler)) {
@@ -190,7 +189,13 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
           parentQueue.getAutoCreatedQueueManagementPolicy();
       long startTime = 0;
       try {
-        startTime = clock.getTime();
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(MessageFormat
+              .format("Trying to use {0} to compute preemption "
+                      + "candidates",
+                  policyClazz.getClass().getName()));
+          startTime = clock.getTime();
+        }
 
         queueManagementChanges = policyClazz.computeQueueManagementChanges();
 
@@ -204,14 +209,15 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
         }
 
         if (LOG.isDebugEnabled()) {
-          LOG.debug("{} uses {} millisecond" + " to run",
-              policyClazz.getClass().getName(), clock.getTime() - startTime);
+          LOG.debug(MessageFormat.format("{0} uses {1} millisecond"
+                  + " to run",
+              policyClazz.getClass().getName(), clock.getTime()
+                  - startTime));
           if (queueManagementChanges.size() > 0) {
-            LOG.debug(" Updated queue management changes for parent queue" + " "
-                    + "{}: [{}]", parentQueue.getQueueName(),
-                queueManagementChanges.size() < 25 ?
-                    queueManagementChanges.toString() :
-                    queueManagementChanges.size());
+            LOG.debug(" Updated queue management updates for parent queue"
+                + " ["
+                + parentQueue.getQueueName() + ": [\n" + queueManagementChanges
+                .toString() + "\n]");
           }
         }
       } catch (YarnException e) {
@@ -226,7 +232,7 @@ public class QueueManagementDynamicEditPolicy implements SchedulingEditPolicy {
             "Skipping queue management updates for parent queue "
                 + parentQueue
                 .getQueuePath() + " "
-                + "since configuration for auto creating queues beyond "
+                + "since configuration for  auto creating queue's beyond "
                 + "parent's "
                 + "guaranteed capacity is disabled");
       }

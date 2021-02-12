@@ -201,9 +201,6 @@ public class DFSOutputStream extends FSOutputSummer
     if (flag.contains(CreateFlag.NO_LOCAL_WRITE)) {
       this.addBlockFlags.add(AddBlockFlag.NO_LOCAL_WRITE);
     }
-    if (flag.contains(CreateFlag.IGNORE_CLIENT_LOCALITY)) {
-      this.addBlockFlags.add(AddBlockFlag.IGNORE_CLIENT_LOCALITY);
-    }
     if (progress != null) {
       DFSClient.LOG.debug("Set non-null progress callback on DFSOutputStream "
           +"{}", src);

@@ -32,8 +32,8 @@ import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -41,6 +41,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.client.HdfsClientConfigKeys;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory;
@@ -56,7 +57,7 @@ import org.junit.Test;
  *  using append()/sync() to recover block information
  */
 public class TestFileAppend4 {
-  static final Logger LOG = LoggerFactory.getLogger(TestFileAppend4.class);
+  static final Log LOG = LogFactory.getLog(TestFileAppend4.class);
   static final long BLOCK_SIZE = 1024;
   static final long BBW_SIZE = 500; // don't align on bytes/checksum
 
@@ -107,9 +108,7 @@ public class TestFileAppend4 {
 
     // set the soft limit to be 1 second so that the
     // namenode triggers lease recovery upon append request
-    cluster.setLeasePeriod(1,
-        conf.getLong(DFSConfigKeys.DFS_LEASE_HARDLIMIT_KEY,
-            DFSConfigKeys.DFS_LEASE_HARDLIMIT_DEFAULT));
+    cluster.setLeasePeriod(1000, HdfsConstants.LEASE_HARDLIMIT_PERIOD);
 
     // Trying recovery
     int tries = 60;

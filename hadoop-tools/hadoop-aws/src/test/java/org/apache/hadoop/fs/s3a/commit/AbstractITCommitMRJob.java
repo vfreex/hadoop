@@ -38,6 +38,7 @@ import org.junit.rules.TemporaryFolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -265,9 +266,9 @@ public abstract class AbstractITCommitMRJob extends AbstractCommitITest {
 
   /**
    * Override point to let implementations tune the MR Job conf.
-   * @param jobConf configuration
+   * @param c configuration
    */
-  protected void applyCustomConfigOptions(JobConf jobConf) throws IOException {
+  protected void applyCustomConfigOptions(Configuration c) {
 
   }
 

@@ -35,7 +35,6 @@ import org.apache.hadoop.util.DataChecksum;
 
 import com.google.common.annotations.VisibleForTesting;
 
-import org.apache.hadoop.util.InvalidChecksumSizeException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -120,19 +119,13 @@ public class BlockMetadataHeader {
     ByteBuffer buf = ByteBuffer.wrap(arr);
 
     while (buf.hasRemaining()) {
-      if (fc.read(buf, buf.position()) <= 0) {
-        throw new CorruptMetaHeaderException("EOF while reading header from "+
-            "the metadata file. The meta file may be truncated or corrupt");
+      if (fc.read(buf, 0) <= 0) {
+        throw new EOFException("unexpected EOF while reading " +
+            "metadata file header");
       }
     }
     short version = (short)((arr[0] << 8) | (arr[1] & 0xff));
-    DataChecksum dataChecksum;
-    try {
-      dataChecksum = DataChecksum.newDataChecksum(arr, 2);
-    } catch (InvalidChecksumSizeException e) {
-      throw new CorruptMetaHeaderException("The block meta file header is "+
-          "corrupt", e);
-    }
+    DataChecksum dataChecksum = DataChecksum.newDataChecksum(arr, 2);
     return new BlockMetadataHeader(version, dataChecksum);
   }
 
@@ -143,14 +136,7 @@ public class BlockMetadataHeader {
    */
   public static BlockMetadataHeader readHeader(DataInputStream in)
       throws IOException {
-    try {
-      return readHeader(in.readShort(), in);
-    } catch (EOFException eof) {
-      // The attempt to read the header threw EOF, indicating there are not
-      // enough bytes in the meta file for the header.
-      throw new CorruptMetaHeaderException("EOF while reading header from meta"+
-          ". The meta file may be truncated or corrupt", eof);
-    }
+    return readHeader(in.readShort(), in);
   }
 
   /**
@@ -184,13 +170,7 @@ public class BlockMetadataHeader {
   // Version is already read.
   private static BlockMetadataHeader readHeader(short version,
       DataInputStream in) throws IOException {
-    DataChecksum checksum = null;
-    try {
-      checksum = DataChecksum.newDataChecksum(in);
-    } catch (InvalidChecksumSizeException e) {
-      throw new CorruptMetaHeaderException("The block meta file header is "+
-          "corrupt", e);
-    }
+    DataChecksum checksum = DataChecksum.newDataChecksum(in);
     return new BlockMetadataHeader(version, checksum);
   }
 

@@ -19,7 +19,6 @@ package org.apache.hadoop.yarn.service.provider.defaultImpl;
 
 import org.apache.hadoop.yarn.service.api.records.Service;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
 import org.apache.hadoop.yarn.service.provider.AbstractProviderService;
 import org.apache.hadoop.yarn.service.utils.SliderFileSystem;
 import org.apache.hadoop.yarn.service.containerlaunch.AbstractLauncher;
@@ -31,8 +30,7 @@ public class DefaultProviderService extends AbstractProviderService {
   @Override
   public void processArtifact(AbstractLauncher launcher,
       ComponentInstance compInstance, SliderFileSystem fileSystem,
-      Service service,
-      ContainerLaunchService.ComponentLaunchContext compLaunchCtx)
+      Service service)
       throws IOException {
   }
 }

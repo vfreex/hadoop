@@ -88,14 +88,9 @@ public class TestTimelineReaderWebServicesBasicAcl {
     Assert.assertFalse(TimelineReaderWebServices
         .validateAuthUserWithEntityUser(manager, null, user1));
 
-    // false because ugi is null in non-secure cluster. User must pass
-    // ?user.name as query params in REST end points.
-    try {
-      TimelineReaderWebServices.checkAccess(manager, null, user1);
-      Assert.fail("user1Ugi is not allowed to view user1");
-    } catch (ForbiddenException e) {
-      // expected
-    }
+    // true because ugi is null
+    Assert.assertTrue(
+        TimelineReaderWebServices.checkAccess(manager, null, user1));
 
     // incoming ugi is admin asking for entity owner user1
     Assert.assertTrue(

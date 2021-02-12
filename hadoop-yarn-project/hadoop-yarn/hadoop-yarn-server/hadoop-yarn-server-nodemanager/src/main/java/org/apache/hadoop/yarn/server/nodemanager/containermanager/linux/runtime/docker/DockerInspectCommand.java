@@ -20,6 +20,7 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.runtime.docker;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.privileged.PrivilegedOperation;
 
@@ -57,7 +58,7 @@ public class DockerInspectCommand extends DockerCommand {
   @Override
   public PrivilegedOperation preparePrivilegedOperation(
       DockerCommand dockerCommand, String containerName, Map<String,
-      String> env, Context nmContext) {
+      String> env, Configuration conf, Context nmContext) {
     PrivilegedOperation dockerOp = new PrivilegedOperation(
         PrivilegedOperation.OperationType.INSPECT_DOCKER_CONTAINER);
     dockerOp.appendArgs(commandArguments, containerName);

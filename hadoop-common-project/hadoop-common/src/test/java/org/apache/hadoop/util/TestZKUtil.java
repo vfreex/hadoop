@@ -131,7 +131,7 @@ public class TestZKUtil {
     assertEquals("x", ZKUtil.resolveConfIndirection("x"));
     
     TEST_FILE.getParentFile().mkdirs();
-    Files.asCharSink(TEST_FILE, Charsets.UTF_8).write("hello world");
+    Files.write("hello world", TEST_FILE, Charsets.UTF_8);
     assertEquals("hello world", ZKUtil.resolveConfIndirection(
         "@" + TEST_FILE.getAbsolutePath()));
     

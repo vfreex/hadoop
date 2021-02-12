@@ -99,17 +99,9 @@ public class FifoAppAttempt extends FiCaSchedulerApp {
             .getApplicationAttemptId() + " container=" + containerId + " host="
             + container.getNodeId().getHost() + " type=" + type);
       }
-      // In order to save space in the audit log, only include the partition
-      // if it is not the default partition.
-      String partition = null;
-      if (appAMNodePartitionName != null &&
-            !appAMNodePartitionName.isEmpty()) {
-        partition = appAMNodePartitionName;
-      }
       RMAuditLogger.logSuccess(getUser(),
           RMAuditLogger.AuditConstants.ALLOC_CONTAINER, "SchedulerApp",
-          getApplicationId(), containerId, container.getResource(),
-          getQueueName(), partition);
+          getApplicationId(), containerId, container.getResource());
 
       return rmContainer;
     } finally {

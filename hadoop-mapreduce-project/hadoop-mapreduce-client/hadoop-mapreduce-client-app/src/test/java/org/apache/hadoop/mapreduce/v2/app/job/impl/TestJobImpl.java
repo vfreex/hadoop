@@ -499,8 +499,6 @@ public class TestJobImpl {
     // not initializing dispatcher to avoid potential race condition between
     // the dispatcher thread & test thread - see MAPREDUCE-6831
     AsyncDispatcher dispatcher = new AsyncDispatcher();
-    dispatcher.init(conf);
-
 
     OutputCommitter committer = new StubbedOutputCommitter() {
       @Override
@@ -961,7 +959,6 @@ public class TestJobImpl {
   public void testJobPriorityUpdate() throws Exception {
     Configuration conf = new Configuration();
     AsyncDispatcher dispatcher = new AsyncDispatcher();
-    dispatcher.init(conf);
     Priority submittedPriority = Priority.newInstance(5);
 
     AppContext mockContext = mock(AppContext.class);

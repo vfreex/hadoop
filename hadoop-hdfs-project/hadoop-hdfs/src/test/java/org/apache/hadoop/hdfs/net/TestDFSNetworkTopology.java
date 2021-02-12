@@ -23,8 +23,6 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.hdfs.DFSTestUtil;
-import org.apache.hadoop.hdfs.protocol.DatanodeID;
-import org.apache.hadoop.hdfs.protocol.DatanodeInfo.DatanodeInfoBuilder;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
 import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeStorageInfo;
 import org.apache.hadoop.net.Node;
@@ -39,10 +37,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
-
 
 /**
  * This class tests the correctness of storage type info stored in
@@ -372,18 +368,6 @@ public class TestDFSNetworkTopology {
     }
   }
 
-  @Test
-  public void testChooseRandomWithStorageTypeWithExcludedforNullCheck()
-      throws Exception {
-    HashSet<Node> excluded = new HashSet<>();
-
-    excluded.add(new DatanodeInfoBuilder()
-        .setNodeID(DatanodeID.EMPTY_DATANODE_ID).build());
-    Node node = CLUSTER.chooseRandomWithStorageType("/", "/l1/d1/r1", excluded,
-        StorageType.ARCHIVE);
-
-    assertNotNull(node);
-  }
 
   /**
    * This test tests the wrapper method. The wrapper method only takes one scope
@@ -580,24 +564,5 @@ public class TestDFSNetworkTopology {
       dd = (DatanodeDescriptor) n;
       assertTrue(dd.getHostName().equals("host7"));
     }
-  }
-
-  @Test
-  public void testChooseRandomWithStorageTypeNoAvlblNode() {
-    DFSNetworkTopology dfsCluster =
-        DFSNetworkTopology.getInstance(new Configuration());
-    final String[] racks = {"/default/rack1", "/default/rack10"};
-    final String[] hosts = {"host1", "host2"};
-    final StorageType[] types = {StorageType.DISK, StorageType.DISK};
-    final DatanodeStorageInfo[] storages =
-        DFSTestUtil.createDatanodeStorageInfos(2, racks, hosts, types);
-    DatanodeDescriptor[] dns = DFSTestUtil.toDatanodeDescriptor(storages);
-    dfsCluster.add(dns[0]);
-    dfsCluster.add(dns[1]);
-    HashSet<Node> excluded = new HashSet<>();
-    excluded.add(dns[1]);
-    Node n = dfsCluster.chooseRandomWithStorageType("/default",
-        "/default/rack1", excluded, StorageType.DISK);
-    assertNull("No node should have been selected.", n);
   }
 }

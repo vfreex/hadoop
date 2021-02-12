@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.nodemanager.webapp.dao.gpu;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 
@@ -32,10 +31,14 @@ import java.util.List;
 @InterfaceStability.Unstable
 @XmlRootElement(name = "nvidia_smi_log")
 public class GpuDeviceInformation {
-  private List<PerGpuDeviceInformation> gpus;
-  private String driverVersion = "N/A";
+  List<PerGpuDeviceInformation> gpus;
 
-  @XmlElement(name = "gpu")
+  String driverVersion = "N/A";
+
+  // More fields like topology information could be added when needed.
+  // ...
+
+  @javax.xml.bind.annotation.XmlElement(name = "gpu")
   public List<PerGpuDeviceInformation> getGpus() {
     return gpus;
   }
@@ -44,7 +47,7 @@ public class GpuDeviceInformation {
     this.gpus = gpus;
   }
 
-  @XmlElement(name = "driver_version")
+  @javax.xml.bind.annotation.XmlElement(name = "driver_version")
   public String getDriverVersion() {
     return driverVersion;
   }
@@ -56,9 +59,8 @@ public class GpuDeviceInformation {
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("=== GPUs in the system ===\n")
-        .append("\tDriver Version:")
-        .append(getDriverVersion()).append("\n");
+    sb.append("=== Gpus in the system ===\n").append("\tDriver Version:").append(
+        getDriverVersion()).append("\n");
 
     if (gpus != null) {
       for (PerGpuDeviceInformation gpu : gpus) {

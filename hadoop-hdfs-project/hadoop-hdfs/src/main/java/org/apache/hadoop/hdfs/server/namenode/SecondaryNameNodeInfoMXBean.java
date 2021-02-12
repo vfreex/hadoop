@@ -32,13 +32,6 @@ public interface SecondaryNameNodeInfoMXBean extends VersionInfoMXBean {
   public String getHostAndPort();
 
   /**
-   * Gets if security is enabled.
-   *
-   * @return true, if security is enabled.
-   */
-  boolean isSecurityEnabled();
-
-  /**
    * @return the timestamp of when the SNN starts
    */
   public long getStartTime();

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
-import org.apache.hadoop.hdfs.server.namenode.snapshot.Snapshot;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -81,6 +80,7 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeys.FS_PROTECTED_DIRECTORIES;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
@@ -169,6 +169,9 @@ public class FSDirectory implements Closeable {
   // Each entry in this set must be a normalized path.
   private volatile SortedSet<String> protectedDirectories;
 
+  // lock to protect the directory and BlockMap
+  private final ReentrantReadWriteLock dirLock;
+
   private final boolean isPermissionEnabled;
   /**
    * Support for ACLs is controlled by a configuration flag. If the
@@ -208,44 +211,37 @@ public class FSDirectory implements Closeable {
     attributeProvider = provider;
   }
 
-  /**
-   * The directory lock dirLock provided redundant locking.
-   * It has been used whenever namesystem.fsLock was used.
-   * dirLock is now removed and utility methods to acquire and release dirLock
-   * remain as placeholders only
-   */
+  // utility methods to acquire and release read lock and write lock
   void readLock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    this.dirLock.readLock().lock();
   }
 
   void readUnlock() {
-    assert namesystem.hasReadLock() : "Should hold namesystem read lock";
+    this.dirLock.readLock().unlock();
   }
 
   void writeLock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    this.dirLock.writeLock().lock();
   }
 
   void writeUnlock() {
-    assert namesystem.hasWriteLock() : "Should hold namesystem write lock";
+    this.dirLock.writeLock().unlock();
   }
 
   boolean hasWriteLock() {
-    return namesystem.hasWriteLock();
+    return this.dirLock.isWriteLockedByCurrentThread();
   }
 
   boolean hasReadLock() {
-    return namesystem.hasReadLock();
+    return this.dirLock.getReadHoldCount() > 0 || hasWriteLock();
   }
 
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getReadHoldCount() {
-    return namesystem.getReadHoldCount();
+    return this.dirLock.getReadHoldCount();
   }
 
-  @Deprecated // dirLock is obsolete, use namesystem.fsLock instead
   public int getWriteHoldCount() {
-    return namesystem.getWriteHoldCount();
+    return this.dirLock.getWriteHoldCount();
   }
 
   @VisibleForTesting
@@ -269,8 +265,7 @@ public class FSDirectory implements Closeable {
   };
 
   FSDirectory(FSNamesystem ns, Configuration conf) throws IOException {
-    // used to enable/disable the use of expanded string tables.
-    SerialNumberManager.initialize(conf);
+    this.dirLock = new ReentrantReadWriteLock(true); // fair
     this.inodeId = new INodeId();
     rootDir = createRoot(ns);
     inodeMap = INodeMap.newInstance(rootDir);
@@ -1294,9 +1289,7 @@ public class FSDirectory implements Closeable {
     // always verify inode name
     verifyINodeName(inode.getLocalNameBytes());
 
-    final QuotaCounts counts = inode
-        .computeQuotaUsage(getBlockStoragePolicySuite(),
-            parent.getStoragePolicyID(), false, Snapshot.CURRENT_STATE_ID);
+    final QuotaCounts counts = inode.computeQuotaUsage(getBlockStoragePolicySuite());
     updateCount(existing, pos, counts, checkQuota);
 
     boolean isRename = (inode.getParent() != null);
@@ -1468,7 +1461,12 @@ public class FSDirectory implements Closeable {
    * @return The inode associated with the given id
    */
   public INode getInode(long id) {
-    return inodeMap.get(id);
+    readLock();
+    try {
+      return inodeMap.get(id);
+    } finally {
+      readUnlock();
+    }
   }
   
   @VisibleForTesting

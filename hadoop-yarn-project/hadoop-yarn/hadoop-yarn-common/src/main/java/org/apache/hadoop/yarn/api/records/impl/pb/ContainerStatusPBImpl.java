@@ -182,7 +182,7 @@ public class ContainerStatusPBImpl extends ContainerStatus {
   public synchronized ExecutionType getExecutionType() {
     ContainerStatusProtoOrBuilder p = viaProto ? proto : builder;
     if (!p.hasExecutionType()) {
-      return ExecutionType.GUARANTEED;
+      return null;
     }
     return convertFromProtoFormat(p.getExecutionType());
   }

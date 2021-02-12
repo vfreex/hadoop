@@ -205,8 +205,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
   private AtomicLong unconfirmedAllocatedMem = new AtomicLong();
   private AtomicInteger unconfirmedAllocatedVcores = new AtomicInteger();
 
-  private String nodeLabelExpression;
-
   public SchedulerApplicationAttempt(ApplicationAttemptId applicationAttemptId, 
       String user, Queue queue, AbstractUsersManager abstractUsersManager,
       RMContext rmContext) {
@@ -228,8 +226,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
         unmanagedAM = appSubmissionContext.getUnmanagedAM();
         this.logAggregationContext =
             appSubmissionContext.getLogAggregationContext();
-        this.nodeLabelExpression =
-            appSubmissionContext.getNodeLabelExpression();
       }
       applicationSchedulingEnvs = rmApp.getApplicationSchedulingEnvs();
     }
@@ -789,7 +785,6 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       List<Container> returnContainerList = new ArrayList<>
           (recoveredPreviousAttemptContainers);
       recoveredPreviousAttemptContainers.clear();
-      updateNMTokens(returnContainerList);
       return returnContainerList;
     } finally {
       writeLock.unlock();
@@ -1128,10 +1123,9 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
       if (!calc.isInvalidDivisor(cluster)) {
         float queueCapacityPerc = queue.getQueueInfo(false, false)
             .getCapacity();
-        queueUsagePerc = calc.divide(cluster, usedResourceClone,
-            Resources.multiply(cluster, queueCapacityPerc)) * 100;
-        if (Float.isNaN(queueUsagePerc) || Float.isInfinite(queueUsagePerc)) {
-          queueUsagePerc = 0.0f;
+        if (queueCapacityPerc != 0) {
+          queueUsagePerc = calc.divide(cluster, usedResourceClone,
+              Resources.multiply(cluster, queueCapacityPerc)) * 100;
         }
         clusterUsagePerc =
             calc.divide(cluster, usedResourceClone, cluster) * 100;
@@ -1476,10 +1470,5 @@ public class SchedulerApplicationAttempt implements SchedulableEntity {
 
   public Map<String, String> getApplicationSchedulingEnvs() {
     return this.applicationSchedulingEnvs;
-  }
-
-  @Override
-  public String getPartition() {
-    return nodeLabelExpression == null ? "" : nodeLabelExpression;
   }
 }

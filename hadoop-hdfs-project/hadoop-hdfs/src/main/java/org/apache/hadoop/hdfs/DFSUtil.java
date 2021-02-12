@@ -1307,15 +1307,11 @@ public class DFSUtil {
       nsId = getOnlyNameServiceIdOrNull(conf);
     }
 
-    String webAddrBaseKey = DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY;
-    String webAddrDefault = DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT;
-    if (getHttpPolicy(conf) == HttpConfig.Policy.HTTPS_ONLY) {
-      webAddrBaseKey = DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_KEY;
-      webAddrDefault = DFSConfigKeys.DFS_NAMENODE_HTTPS_ADDRESS_DEFAULT;
-    }
     String webAddrKey = DFSUtilClient.concatSuffixes(
-        webAddrBaseKey, nsId, nnId);
-    String webAddr = conf.get(webAddrKey, webAddrDefault);
+        DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY, nsId, nnId);
+
+    String webAddr =
+        conf.get(webAddrKey, DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_DEFAULT);
     return webAddr;
   }
 

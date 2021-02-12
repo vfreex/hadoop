@@ -292,7 +292,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
     final StringBuilder sb = new StringBuilder(
         "AbstractS3ACommitter{");
     sb.append("role=").append(role);
-    sb.append(", name=").append(getName());
+    sb.append(", name").append(getName());
     sb.append(", outputPath=").append(getOutputPath());
     sb.append(", workPath=").append(workPath);
     sb.append('}');
@@ -532,14 +532,8 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
              new DurationInfo(LOG, "Aborting all pending commits under %s",
                  dest)) {
       CommitOperations ops = getCommitOperations();
-      List<MultipartUpload> pending;
-      try {
-        pending = ops.listPendingUploadsUnderPath(dest);
-      } catch (IOException e) {
-        // raised if the listPendingUploads call failed.
-        maybeIgnore(suppressExceptions, "aborting pending uploads", e);
-        return;
-      }
+      List<MultipartUpload> pending = ops
+          .listPendingUploadsUnderPath(dest);
       Tasks.foreach(pending)
           .executeWith(buildThreadPool(getJobContext()))
           .suppressExceptions(suppressExceptions)
@@ -662,7 +656,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
   }
 
   /**
-   * Log or rethrow a caught IOException.
+   * Execute an operation; maybe suppress any raised IOException.
    * @param suppress should raised IOEs be suppressed?
    * @param action action (for logging when the IOE is suppressed.
    * @param ex  exception
@@ -673,7 +667,7 @@ public abstract class AbstractS3ACommitter extends PathOutputCommitter {
       String action,
       IOException ex) throws IOException {
     if (suppress) {
-      LOG.debug(action, ex);
+      LOG.info(action, ex);
     } else {
       throw ex;
     }

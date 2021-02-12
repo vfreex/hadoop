@@ -130,7 +130,7 @@ JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompre
     ZStandardDecompressor_remaining = (*env)->GetFieldID(env, clazz, "remaining", "I");
 }
 
-JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_create(JNIEnv *env, jclass clazz) {
+JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_create(JNIEnv *env, jobject this) {
     ZSTD_DStream * stream = dlsym_ZSTD_createDStream();
     if (stream == NULL) {
         THROW(env, "java/lang/InternalError", "Error creating stream");
@@ -139,16 +139,17 @@ JNIEXPORT jlong JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompr
     return (jlong) stream;
 }
 
-JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_init(JNIEnv *env, jclass clazz, jlong stream) {
+JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_init(JNIEnv *env, jobject this, jlong stream) {
     size_t result = dlsym_ZSTD_initDStream((ZSTD_DStream *) stream);
     if (dlsym_ZSTD_isError(result)) {
         THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(result));
         return;
     }
+    (*env)->SetLongField(env, this, ZStandardDecompressor_remaining, 0);
 }
 
 
-JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_free(JNIEnv *env, jclass clazz, jlong stream) {
+JNIEXPORT void JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_free(JNIEnv *env, jclass obj, jlong stream) {
     size_t result = dlsym_ZSTD_freeDStream((ZSTD_DStream *) stream);
     if (dlsym_ZSTD_isError(result)) {
         THROW(env, "java/lang/InternalError", dlsym_ZSTD_getErrorName(result));
@@ -178,7 +179,6 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompre
         return (jint) 0;
     }
     uncompressed_bytes = ((char*) uncompressed_bytes) + uncompressed_direct_buf_off;
-    uncompressed_direct_buf_len -= uncompressed_direct_buf_off;
 
     ZSTD_inBuffer input = { compressed_bytes, compressed_direct_buf_len, compressed_direct_buf_off };
     ZSTD_outBuffer output = { uncompressed_bytes, uncompressed_direct_buf_len, 0 };
@@ -209,7 +209,7 @@ JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompre
 
 // returns the max size of the recommended input and output buffers
 JNIEXPORT jint JNICALL Java_org_apache_hadoop_io_compress_zstd_ZStandardDecompressor_getStreamSize
-(JNIEnv *env, jclass clazz) {
+(JNIEnv *env, jclass obj) {
     int x = (int) dlsym_ZSTD_DStreamInSize();
     int y = (int) dlsym_ZSTD_DStreamOutSize();
     return (x >= y) ? x : y;

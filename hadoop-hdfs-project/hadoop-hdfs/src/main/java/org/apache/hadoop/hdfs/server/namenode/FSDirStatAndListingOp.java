@@ -73,12 +73,14 @@ class FSDirStatAndListingOp {
       }
     }
 
+    boolean isSuperUser = true;
     if (fsd.isPermissionEnabled()) {
       if (iip.getLastINode() != null && iip.getLastINode().isDirectory()) {
         fsd.checkPathAccess(pc, iip, FsAction.READ_EXECUTE);
       }
+      isSuperUser = pc.isSuperUser();
     }
-    return getListing(fsd, iip, startAfter, needLocation);
+    return getListing(fsd, iip, startAfter, needLocation, isSuperUser);
   }
 
   /**
@@ -179,7 +181,7 @@ class FSDirStatAndListingOp {
       boolean updateAccessTime = fsd.isAccessTimeSupported()
           && !iip.isSnapshot()
           && now > inode.getAccessTime() + fsd.getAccessTimePrecision();
-      return new GetBlockLocationsResult(updateAccessTime, blocks, iip);
+      return new GetBlockLocationsResult(updateAccessTime, blocks);
     } finally {
       fsd.readUnlock();
     }
@@ -203,10 +205,11 @@ class FSDirStatAndListingOp {
    *            path
    * @param startAfter the name to start listing after
    * @param needLocation if block locations are returned
+   * @param includeStoragePolicy if storage policy is returned
    * @return a partial listing starting after startAfter
    */
   private static DirectoryListing getListing(FSDirectory fsd, INodesInPath iip,
-      byte[] startAfter, boolean needLocation)
+      byte[] startAfter, boolean needLocation, boolean includeStoragePolicy)
       throws IOException {
     if (FSDirectory.isExactReservedName(iip.getPathComponents())) {
       return getReservedListing(fsd);
@@ -223,7 +226,9 @@ class FSDirStatAndListingOp {
         return null;
       }
 
-      byte parentStoragePolicy = targetNode.getStoragePolicyID();
+      byte parentStoragePolicy = includeStoragePolicy
+          ? targetNode.getStoragePolicyID()
+          : HdfsConstants.BLOCK_STORAGE_POLICY_ID_UNSPECIFIED;
 
       if (!targetNode.isDirectory()) {
         // return the file's status. note that the iip already includes the
@@ -245,10 +250,9 @@ class FSDirStatAndListingOp {
       HdfsFileStatus listing[] = new HdfsFileStatus[numOfListing];
       for (int i = 0; i < numOfListing && locationBudget > 0; i++) {
         INode child = contents.get(startChild+i);
-        byte childStoragePolicy =
-            !child.isSymlink()
-                ? getStoragePolicyID(child.getLocalStoragePolicyID(),
-                    parentStoragePolicy)
+        byte childStoragePolicy = (includeStoragePolicy && !child.isSymlink())
+            ? getStoragePolicyID(child.getLocalStoragePolicyID(),
+                                 parentStoragePolicy)
             : parentStoragePolicy;
         listing[i] = createFileStatus(fsd, iip, child, childStoragePolicy,
             needLocation, false);
@@ -561,10 +565,6 @@ class FSDirStatAndListingOp {
     fsd.readLock();
     try {
       INode targetNode = iip.getLastINode();
-      if (targetNode == null) {
-        throw new FileNotFoundException(
-            "File/Directory does not exist: " + iip.getPath());
-      }
       QuotaUsage usage = null;
       if (targetNode.isDirectory()) {
         DirectoryWithQuotaFeature feature =
@@ -590,18 +590,13 @@ class FSDirStatAndListingOp {
   static class GetBlockLocationsResult {
     final boolean updateAccessTime;
     final LocatedBlocks blocks;
-    private final INodesInPath iip;
     boolean updateAccessTime() {
       return updateAccessTime;
     }
-    public INodesInPath getIIp() {
-      return iip;
-    }
     private GetBlockLocationsResult(
-        boolean updateAccessTime, LocatedBlocks blocks, INodesInPath iip) {
+        boolean updateAccessTime, LocatedBlocks blocks) {
       this.updateAccessTime = updateAccessTime;
       this.blocks = blocks;
-      this.iip = iip;
     }
   }
 }

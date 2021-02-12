@@ -300,8 +300,7 @@ extends AbstractDelegationTokenIdentifier>
 
   /**
    * This method is intended to be used for recovering persisted delegation
-   * tokens. Tokens that have an unknown <code>DelegationKey</code> are
-   * marked as expired and automatically cleaned up.
+   * tokens
    * This method must be called before this secret manager is activated (before
    * startThreads() is called)
    * @param identifier identifier read from persistent storage
@@ -317,15 +316,12 @@ extends AbstractDelegationTokenIdentifier>
     }
     int keyId = identifier.getMasterKeyId();
     DelegationKey dKey = allKeys.get(keyId);
-    byte[] password = null;
     if (dKey == null) {
-      LOG.warn("No KEY found for persisted identifier, expiring stored token "
+      LOG.warn("No KEY found for persisted identifier "
           + formatTokenId(identifier));
-      // make sure the token is expired
-      renewDate = 0L;
-    } else {
-      password = createPassword(identifier.getBytes(), dKey.getKey());
+      return;
     }
+    byte[] password = createPassword(identifier.getBytes(), dKey.getKey());
     if (identifier.getSequenceNumber() > getDelegationTokenSeqNum()) {
       setDelegationTokenSeqNum(identifier.getSequenceNumber());
     }

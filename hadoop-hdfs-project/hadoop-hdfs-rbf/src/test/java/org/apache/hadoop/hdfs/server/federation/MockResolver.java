@@ -129,9 +129,6 @@ public class MockResolver
     // Return a copy of the list because it is updated periodically
     List<? extends FederationNamenodeContext> namenodes =
         this.resolver.get(nameserviceId);
-    if (namenodes == null) {
-      namenodes = new ArrayList<>();
-    }
     return Collections.unmodifiableList(new ArrayList<>(namenodes));
   }
 

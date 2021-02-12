@@ -153,10 +153,6 @@ public class SlidingWindowRetryPolicy {
     }
 
     int getRemainingRetries() {
-      if (containerRetryContext.getMaxRetries() ==
-          ContainerRetryContext.RETRY_FOREVER) {
-        return ContainerRetryContext.RETRY_FOREVER;
-      }
       return remainingRetries;
     }
 

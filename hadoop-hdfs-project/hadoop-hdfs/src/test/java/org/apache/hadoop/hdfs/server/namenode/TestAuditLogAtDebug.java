@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs.server.namenode;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -34,8 +35,6 @@ import org.junit.rules.Timeout;
 import java.net.Inet4Address;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
-
 
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Mockito.*;
@@ -123,7 +122,8 @@ public class TestAuditLogAtDebug {
   
   @Test
   public void testEmptyDebugCommands() {
-    DefaultAuditLogger logger = makeSpyLogger(Level.INFO, Optional.empty());
+    DefaultAuditLogger logger = makeSpyLogger(
+        Level.INFO, Optional.<List<String>>absent());
     logDummyCommandToAuditLog(logger, DUMMY_COMMAND_1);
     logDummyCommandToAuditLog(logger, DUMMY_COMMAND_2);
     verify(logger, times(2)).logAuditMessage(anyString());

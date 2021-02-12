@@ -36,16 +36,7 @@ public enum AddBlockFlag {
    *
    * @see CreateFlag#NO_LOCAL_WRITE
    */
-  NO_LOCAL_WRITE((short) 0x01),
-
-  /**
-   * Advise that the first block replica NOT take into account DataNode
-   * locality. The first block replica should be placed randomly within the
-   * cluster. Subsequent block replicas should follow DataNode locality rules.
-   *
-   * @see CreateFlag#IGNORE_CLIENT_LOCALITY
-   */
-  IGNORE_CLIENT_LOCALITY((short) 0x02);
+  NO_LOCAL_WRITE((short) 0x01);
 
   private final short mode;
 

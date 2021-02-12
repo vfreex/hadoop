@@ -47,19 +47,13 @@ public class IOUtilsClient {
 
   public static void updateReadStatistics(ReadStatistics readStatistics,
                                       int nRead, BlockReader blockReader) {
-    updateReadStatistics(readStatistics, nRead, blockReader.isShortCircuit(),
-        blockReader.getNetworkDistance());
-  }
-
-  public static void updateReadStatistics(ReadStatistics readStatistics,
-      int nRead, boolean isShortCircuit, int networkDistance) {
     if (nRead <= 0) {
       return;
     }
 
-    if (isShortCircuit) {
+    if (blockReader.isShortCircuit()) {
       readStatistics.addShortCircuitBytes(nRead);
-    } else if (networkDistance == 0) {
+    } else if (blockReader.getNetworkDistance() == 0) {
       readStatistics.addLocalBytes(nRead);
     } else {
       readStatistics.addRemoteBytes(nRead);

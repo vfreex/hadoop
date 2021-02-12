@@ -268,7 +268,12 @@ class CopyCommands {
       try {
         items.add(new PathData(new URI(arg), getConf()));
       } catch (URISyntaxException e) {
-        items.add(new PathData(arg, getConf()));
+        if (Path.WINDOWS) {
+          // Unlike URI, PathData knows how to parse Windows drive-letter paths.
+          items.add(new PathData(arg, getConf()));
+        } else {
+          throw new IOException("unexpected URISyntaxException", e);
+        }
       }
       return items;
     }

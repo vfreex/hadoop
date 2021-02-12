@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.datanode.checker;
 
 import static org.apache.hadoop.hdfs.DFSConfigKeys.*;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
-import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation;
 import org.apache.hadoop.hdfs.server.datanode.StorageLocation.CheckContext;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
@@ -46,7 +46,6 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -106,11 +105,10 @@ public class StorageLocationChecker {
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY,
         DFS_DATANODE_FAILED_VOLUMES_TOLERATED_DEFAULT);
 
-    if (maxVolumeFailuresTolerated < DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
+    if (maxVolumeFailuresTolerated < 0) {
       throw new DiskErrorException("Invalid value configured for "
           + DFS_DATANODE_FAILED_VOLUMES_TOLERATED_KEY + " - "
-          + maxVolumeFailuresTolerated + " "
-          + DataNode.MAX_VOLUME_FAILURES_TOLERATED_MSG);
+          + maxVolumeFailuresTolerated + " (should be non-negative)");
     }
 
     this.timer = timer;
@@ -215,22 +213,12 @@ public class StorageLocationChecker {
       }
     }
 
-    if (maxVolumeFailuresTolerated == DataNode.MAX_VOLUME_FAILURE_TOLERATED_LIMIT) {
-      if (dataDirs.size() == failedLocations.size()) {
-        throw new DiskErrorException("Too many failed volumes - "
-            + "current valid volumes: " + goodLocations.size()
-            + ", volumes configured: " + dataDirs.size()
-            + ", volumes failed: " + failedLocations.size()
-            + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
-      }
-    } else {
-      if (failedLocations.size() > maxVolumeFailuresTolerated) {
-        throw new DiskErrorException("Too many failed volumes - "
-            + "current valid volumes: " + goodLocations.size()
-            + ", volumes configured: " + dataDirs.size()
-            + ", volumes failed: " + failedLocations.size()
-            + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
-      }
+    if (failedLocations.size() > maxVolumeFailuresTolerated) {
+      throw new DiskErrorException("Too many failed volumes - "
+          + "current valid volumes: " + goodLocations.size()
+          + ", volumes configured: " + dataDirs.size()
+          + ", volumes failed: " + failedLocations.size()
+          + ", volume failures tolerated: " + maxVolumeFailuresTolerated);
     }
 
     if (goodLocations.size() == 0) {

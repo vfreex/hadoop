@@ -39,7 +39,6 @@ import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.server.timeline.security.TimelineACLsManager;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.EnumSet;
@@ -232,8 +231,8 @@ public class PluginStoreTestUtils {
   static void writeEntities(TimelineEntities entities, Path logPath,
       FileSystem fs) throws IOException {
     FSDataOutputStream outStream = createLogFile(logPath, fs);
-    JsonGenerator jsonGenerator =
-        new JsonFactory().createGenerator((OutputStream) outStream);
+    JsonGenerator jsonGenerator
+        = new JsonFactory().createGenerator(outStream);
     jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
     ObjectMapper objMapper = createObjectMapper();
     for (TimelineEntity entity : entities.getEntities()) {

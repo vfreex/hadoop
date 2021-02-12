@@ -55,9 +55,4 @@ public interface SchedulableEntity {
    */
   public boolean isRecovering();
 
-  /**
-   * Get partition corresponding to this entity.
-   * @return partition
-   */
-  String getPartition();
 }

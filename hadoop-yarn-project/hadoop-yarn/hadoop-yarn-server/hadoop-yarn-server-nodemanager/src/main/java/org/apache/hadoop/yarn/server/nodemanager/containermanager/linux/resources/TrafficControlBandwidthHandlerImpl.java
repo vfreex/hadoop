@@ -277,9 +277,4 @@ public class TrafficControlBandwidthHandlerImpl
 
     return null;
   }
-
-  @Override
-  public String toString() {
-    return TrafficControlBandwidthHandlerImpl.class.getName();
-  }
 }

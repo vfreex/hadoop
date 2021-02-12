@@ -526,7 +526,7 @@ public class FederationMetrics implements FederationMBean {
 
   @Override
   public String getHostAndPort() {
-    InetSocketAddress address = this.router.getRpcServerAddress();
+    InetSocketAddress address = this.router.getHttpServerAddress();
     if (address != null) {
       try {
         String hostname = InetAddress.getLocalHost().getHostName();

@@ -17,15 +17,9 @@
  */
 package org.apache.hadoop.hdfs.server.federation.resolver;
 
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DFS_NAMESERVICES;
-import static org.apache.hadoop.hdfs.client.HdfsClientConfigKeys.DeprecatedKeys.DFS_NAMESERVICE_ID;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE;
 import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE;
-import static org.apache.hadoop.hdfs.server.federation.router.RBFConfigKeys.FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT;
 import static org.apache.hadoop.hdfs.server.federation.router.FederationUtil.isParentEntry;
 
 import java.io.IOException;
@@ -48,6 +42,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -97,8 +92,6 @@ public class MountTableResolver
 
   /** Default nameservice when no mount matches the math. */
   private String defaultNameService = "";
-  /** If use default nameservice to read and write files. */
-  private boolean defaultNSEnable = true;
 
   /** Synchronization for both the tree and the cache. */
   private final ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
@@ -130,19 +123,12 @@ public class MountTableResolver
       this.stateStore = null;
     }
 
-    boolean mountTableCacheEnable = conf.getBoolean(
-        FEDERATION_MOUNT_TABLE_CACHE_ENABLE,
-        FEDERATION_MOUNT_TABLE_CACHE_ENABLE_DEFAULT);
-    if (mountTableCacheEnable) {
-      int maxCacheSize = conf.getInt(
-          FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE,
-          FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT);
-      this.locationCache = CacheBuilder.newBuilder()
-          .maximumSize(maxCacheSize)
-          .build();
-    } else {
-      this.locationCache = null;
-    }
+    int maxCacheSize = conf.getInt(
+        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE,
+        FEDERATION_MOUNT_TABLE_MAX_CACHE_SIZE_DEFAULT);
+    this.locationCache = CacheBuilder.newBuilder()
+        .maximumSize(maxCacheSize)
+        .build();
 
     registerCacheExternal();
     initDefaultNameService(conf);
@@ -163,33 +149,15 @@ public class MountTableResolver
    * @param conf Configuration for this resolver.
    */
   private void initDefaultNameService(Configuration conf) {
-    this.defaultNameService = conf.get(
-        DFS_ROUTER_DEFAULT_NAMESERVICE,
-        DFSUtil.getNamenodeNameServiceId(conf));
-
-    this.defaultNSEnable = conf.getBoolean(
-        DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE,
-        DFS_ROUTER_DEFAULT_NAMESERVICE_ENABLE_DEFAULT);
-
-    if (defaultNameService == null) {
-      LOG.warn(
-          "{} and {} is not set. Fallback to {} as the default name service.",
-          DFS_ROUTER_DEFAULT_NAMESERVICE, DFS_NAMESERVICE_ID, DFS_NAMESERVICES);
+    try {
+      this.defaultNameService = conf.get(
+          DFS_ROUTER_DEFAULT_NAMESERVICE,
+          DFSUtil.getNamenodeNameServiceId(conf));
+    } catch (HadoopIllegalArgumentException e) {
+      LOG.error("Cannot find default name service, setting it to the first");
       Collection<String> nsIds = DFSUtilClient.getNameServiceIds(conf);
-      if (nsIds.isEmpty()) {
-        this.defaultNameService = "";
-      } else {
-        this.defaultNameService = nsIds.iterator().next();
-      }
-    }
-
-    if (this.defaultNameService.equals("")) {
-      this.defaultNSEnable = false;
-      LOG.warn("Default name service is not set.");
-    } else {
-      String enable = this.defaultNSEnable ? "enabled" : "disabled";
-      LOG.info("Default name service: {}, {} to read or write",
-          this.defaultNameService, enable);
+      this.defaultNameService = nsIds.iterator().next();
+      LOG.info("Default name service: {}", this.defaultNameService);
     }
   }
 
@@ -259,7 +227,7 @@ public class MountTableResolver
    */
   private void invalidateLocationCache(final String path) {
     LOG.debug("Invalidating {} from {}", path, locationCache);
-    if (locationCache == null || locationCache.size() == 0) {
+    if (locationCache.size() == 0) {
       return;
     }
 
@@ -379,9 +347,7 @@ public class MountTableResolver
     LOG.info("Clearing all mount location caches");
     writeLock.lock();
     try {
-      if (this.locationCache != null) {
-        this.locationCache.invalidateAll();
-      }
+      this.locationCache.invalidateAll();
       this.tree.clear();
     } finally {
       writeLock.unlock();
@@ -394,9 +360,6 @@ public class MountTableResolver
     verifyMountTable();
     readLock.lock();
     try {
-      if (this.locationCache == null) {
-        return lookupLocation(path);
-      }
       Callable<? extends PathLocation> meh = new Callable<PathLocation>() {
         @Override
         public PathLocation call() throws Exception {
@@ -417,17 +380,13 @@ public class MountTableResolver
    * @param path Path to check/insert.
    * @return New remote location.
    */
-  public PathLocation lookupLocation(final String path) throws IOException {
+  public PathLocation lookupLocation(final String path) {
     PathLocation ret = null;
     MountTable entry = findDeepest(path);
     if (entry != null) {
       ret = buildLocation(path, entry);
     } else {
       // Not found, use default location
-      if (!defaultNSEnable) {
-        throw new IOException("Cannot find locations for " + path + ", " +
-            "because the default nameservice is disabled to read or write");
-      }
       RemoteLocation remoteLocation =
           new RemoteLocation(defaultNameService, path, path);
       List<RemoteLocation> locations =
@@ -632,30 +591,7 @@ public class MountTableResolver
    * Get the size of the cache.
    * @return Size of the cache.
    */
-  protected long getCacheSize() throws IOException{
-    if (this.locationCache != null) {
-      return this.locationCache.size();
-    }
-    throw new IOException("localCache is null");
-  }
-
-  @VisibleForTesting
-  public String getDefaultNameService() {
-    return defaultNameService;
-  }
-
-  @VisibleForTesting
-  public void setDefaultNameService(String defaultNameService) {
-    this.defaultNameService = defaultNameService;
-  }
-
-  @VisibleForTesting
-  public boolean isDefaultNSEnable() {
-    return defaultNSEnable;
-  }
-
-  @VisibleForTesting
-  public void setDefaultNSEnable(boolean defaultNSRWEnable) {
-    this.defaultNSEnable = defaultNSRWEnable;
+  protected long getCacheSize() {
+    return this.locationCache.size();
   }
 }

@@ -71,14 +71,14 @@ public class ResourcePBImpl extends Resource {
     initResources();
   }
 
-  synchronized public ResourceProto getProto() {
+  public ResourceProto getProto() {
     mergeLocalToProto();
     proto = viaProto ? proto : builder.build();
     viaProto = true;
     return proto;
   }
 
-  synchronized private void maybeInitBuilder() {
+  private void maybeInitBuilder() {
     if (viaProto || builder == null) {
       builder = ResourceProto.newBuilder(proto);
     }
@@ -127,7 +127,7 @@ public class ResourcePBImpl extends Resource {
     resources[VCORES_INDEX].setValue(vCores);
   }
 
-  synchronized private void initResources() {
+  private void initResources() {
     if (this.resources != null) {
       return;
     }

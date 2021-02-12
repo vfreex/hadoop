@@ -40,7 +40,7 @@ public class RMAuditLogger {
   enum Keys {USER, OPERATION, TARGET, RESULT, IP, PERMISSIONS,
                     DESCRIPTION, APPID, APPATTEMPTID, CONTAINERID, 
                     CALLERCONTEXT, CALLERSIGNATURE, RESOURCE, QUEUENAME,
-                    INCLUDEAPPS, INCLUDECHILDQUEUES, RECURSIVE, NODELABEL}
+                    INCLUDEAPPS, INCLUDECHILDQUEUES, RECURSIVE}
 
   public static class AuditConstants {
     static final String SUCCESS = "SUCCESS";
@@ -98,7 +98,7 @@ public class RMAuditLogger {
       ApplicationId appId, ApplicationAttemptId attemptId,
       ContainerId containerId, Resource resource) {
     return createSuccessLog(user, operation, target, appId, attemptId,
-        containerId, resource, null, Server.getRemoteIp(), null, null);
+        containerId, resource, null, Server.getRemoteIp());
   }
 
   /**
@@ -124,7 +124,7 @@ public class RMAuditLogger {
   static String createSuccessLog(String user, String operation, String target,
       ApplicationId appId, ApplicationAttemptId attemptId,
       ContainerId containerId, Resource resource, CallerContext callerContext,
-      InetAddress ip, String queueName, String partition) {
+      InetAddress ip) {
     StringBuilder b =
         createStringBuilderForSuccessEvent(user, operation, target, ip);
     if (appId != null) {
@@ -140,12 +140,6 @@ public class RMAuditLogger {
       add(Keys.RESOURCE, resource.toString(), b);
     }
     appendCallerContext(b, callerContext);
-    if (queueName != null) {
-      add(Keys.QUEUENAME, queueName, b);
-    }
-    if (partition != null) {
-      add(Keys.NODELABEL, partition, b);
-    }
     return b.toString();
   }
   
@@ -209,32 +203,6 @@ public class RMAuditLogger {
   }
 
   /**
-   * Create a readable and parseable audit log string for a successful event.
-   *
-   * @param user User who made the service request to the ResourceManager
-   * @param operation Operation requested by the user.
-   * @param target The target on which the operation is being performed.
-   * @param appId Application Id in which operation was performed.
-   * @param containerId Container Id in which operation was performed.
-   * @param resource Resource associated with container.
-   * @param queueName Name of queue.
-   * @param partition Name of labeled partition.
-   *
-   * <br><br>
-   * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter
-   * and hence the value fields should not contains tabs ('\t').
-   */
-  public static void logSuccess(String user, String operation, String target,
-      ApplicationId appId, ContainerId containerId, Resource resource,
-      String queueName, String partition) {
-    if (LOG.isInfoEnabled()) {
-      LOG.info(createSuccessLog(user, operation, target, appId, null,
-          containerId, resource, null, Server.getRemoteIp(), queueName,
-          partition));
-    }
-  }
-
-  /**
    * Create a general readable and parseable audit log string for a successful
    * event.
    *
@@ -275,16 +243,6 @@ public class RMAuditLogger {
     }
   }
 
-  public static void logSuccess(String user, String operation, String target,
-      ApplicationId appId, CallerContext callerContext, String queueName,
-      String partition) {
-    if (LOG.isInfoEnabled()) {
-      LOG.info(
-          createSuccessLog(user, operation, target, appId, null, null, null,
-              callerContext, Server.getRemoteIp(), queueName, partition));
-    }
-  }
-
   /**
    * Create a readable and parseable audit log string for a successful event.
    *
@@ -305,20 +263,12 @@ public class RMAuditLogger {
           null, null));
     }
   }
-
+  
   public static void logSuccess(String user, String operation, String target,
       ApplicationId appId, CallerContext callerContext) {
     if (LOG.isInfoEnabled()) {
       LOG.info(createSuccessLog(user, operation, target, appId, null, null,
-          null, callerContext, Server.getRemoteIp(), null, null));
-    }
-  }
-
-  public static void logSuccess(String user, String operation, String target,
-      ApplicationId appId, CallerContext callerContext, String queueName) {
-    if (LOG.isInfoEnabled()) {
-      LOG.info(createSuccessLog(user, operation, target, appId, null, null,
-          null, callerContext, Server.getRemoteIp(), queueName, null));
+          null, callerContext, Server.getRemoteIp()));
     }
   }
 
@@ -346,7 +296,7 @@ public class RMAuditLogger {
       ApplicationId appId, InetAddress ip) {
     if (LOG.isInfoEnabled()) {
       LOG.info(createSuccessLog(user, operation, target, appId, null, null,
-          null, null, ip, null, null));
+          null, null, ip));
     }
   }
 
@@ -405,8 +355,7 @@ public class RMAuditLogger {
   static String createFailureLog(String user, String operation, String perm,
       String target, String description, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId,
-      Resource resource, CallerContext callerContext, String queueName,
-      String partition) {
+      Resource resource, CallerContext callerContext) {
     StringBuilder b = createStringBuilderForFailureLog(user,
         operation, target, description, perm);
     if (appId != null) {
@@ -422,13 +371,6 @@ public class RMAuditLogger {
       add(Keys.RESOURCE, resource.toString(), b);
     }
     appendCallerContext(b, callerContext);
-    if (queueName != null) {
-      add(Keys.QUEUENAME, queueName, b);
-    }
-    if (partition != null) {
-      add(Keys.NODELABEL, partition, b);
-    }
-
     return b.toString();
   }
 
@@ -439,7 +381,7 @@ public class RMAuditLogger {
       String target, String description, ApplicationId appId,
       ApplicationAttemptId attemptId, ContainerId containerId, Resource resource) {
     return createFailureLog(user, operation, perm, target, description, appId,
-        attemptId, containerId, resource, null, null, null);
+        attemptId, containerId, resource, null);
   }
 
   /**
@@ -505,22 +447,13 @@ public class RMAuditLogger {
           appId, attemptId, null, null));
     }
   }
-
+  
   public static void logFailure(String user, String operation, String perm,
       String target, String description, ApplicationId appId,
       CallerContext callerContext) {
     if (LOG.isWarnEnabled()) {
       LOG.warn(createFailureLog(user, operation, perm, target, description,
-          appId, null, null, null, callerContext, null, null));
-    }
-  }
-
-  public static void logFailure(String user, String operation, String perm,
-      String target, String description, ApplicationId appId,
-      CallerContext callerContext, String queueName) {
-    if (LOG.isWarnEnabled()) {
-      LOG.warn(createFailureLog(user, operation, perm, target, description,
-          appId, null, null, null, callerContext, queueName, null));
+          appId, null, null, null, callerContext));
     }
   }
 
@@ -544,15 +477,6 @@ public class RMAuditLogger {
     if (LOG.isWarnEnabled()) {
       LOG.warn(createFailureLog(user, operation, perm, target, description,
           appId, null, null, null));
-    }
-  }
-
-  public static void logFailure(String user, String operation, String perm,
-      String target, String description, ApplicationId appId,
-      String queueName) {
-    if (LOG.isWarnEnabled()) {
-      LOG.warn(createFailureLog(user, operation, perm, target, description,
-          appId, null, null, null, null, queueName, null));
     }
   }
 
@@ -597,34 +521,6 @@ public class RMAuditLogger {
     if (LOG.isWarnEnabled()) {
       LOG.warn(createFailureLog(user, operation, perm, target, description,
           args));
-    }
-  }
-
-  /**
-   * Create a readable and parseable audit log string for a failed event.
-   *
-   * @param user User who made the service request.
-   * @param operation Operation requested by the user.
-   * @param perm Target permissions.
-   * @param target The target on which the operation is being performed.
-   * @param description Some additional information as to why the operation
-   *                    failed.
-   * @param appId ApplicationId in which operation was performed.
-   * @param callerContext Caller context
-   * @param queueName Name of queue.
-   * @param partition Name of labeled partition.
-   *
-   * <br><br>
-   * Note that the {@link RMAuditLogger} uses tabs ('\t') as a key-val delimiter
-   * and hence the value fields should not contains tabs ('\t').
-   */
-  public static void logFailure(String user, String operation, String perm,
-      String target, String description, ApplicationId appId,
-      CallerContext callerContext, String queueName, String partition) {
-    if (LOG.isWarnEnabled()) {
-      LOG.warn(
-          createFailureLog(user, operation, perm, target, description, appId,
-              null, null, null, callerContext, queueName, partition));
     }
   }
 

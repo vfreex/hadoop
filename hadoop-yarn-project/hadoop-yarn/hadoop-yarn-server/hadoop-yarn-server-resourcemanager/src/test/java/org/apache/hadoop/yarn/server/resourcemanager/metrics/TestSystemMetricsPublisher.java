@@ -517,8 +517,7 @@ public class TestSystemMetricsPublisher {
         .put(ResourceInformation.MEMORY_MB.getName(), (long) Integer.MAX_VALUE);
     preemptedMap.put(ResourceInformation.VCORES.getName(), Long.MAX_VALUE);
     when(app.getRMAppMetrics())
-        .thenReturn(new RMAppMetrics(null, 0, 0, resourceMap, preemptedMap,
-            0));
+        .thenReturn(new RMAppMetrics(null, 0, 0, resourceMap, preemptedMap));
     Set<String> appTags = new HashSet<String>();
     appTags.add("test");
     appTags.add("tags");

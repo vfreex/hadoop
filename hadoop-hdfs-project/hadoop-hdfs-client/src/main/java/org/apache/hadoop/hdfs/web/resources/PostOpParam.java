@@ -29,8 +29,6 @@ public class PostOpParam extends HttpOpParam<PostOpParam.Op> {
 
     TRUNCATE(false, HttpURLConnection.HTTP_OK),
 
-    UNSETECPOLICY(false, HttpURLConnection.HTTP_OK),
-
     UNSETSTORAGEPOLICY(false, HttpURLConnection.HTTP_OK),
 
     NULL(false, HttpURLConnection.HTTP_NOT_IMPLEMENTED);

@@ -79,7 +79,7 @@ import static org.apache.hadoop.yarn.server.nodemanager.containermanager.linux.r
  * mapping the application owner to a UID on the execution host, resource
  * management through Linux CGROUPS, and Docker support.</p>
  *
- * <p>If {@code hadoop.security.authentication} is set to {@code simple},
+ * <p>If {@code hadoop.security.authetication} is set to {@code simple},
  * then the
  * {@code yarn.nodemanager.linux-container-executor.nonsecure-mode.limit-users}
  * property will determine whether the {@code LinuxContainerExecutor} runs
@@ -269,7 +269,7 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    * Add a niceness level to the process that will be executed.  Adds
    * {@code -n <nice>} to the given command. The niceness level will be
    * taken from the
-   * {@link YarnConfiguration#NM_CONTAINER_EXECUTOR_SCHED_PRIORITY} property.
+   * {@code yarn.nodemanager.container-executer.os.sched.prioity} property.
    *
    * @param command the command to which to add the niceness setting.
    */
@@ -312,12 +312,11 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       resourceHandlerChain = ResourceHandlerModule
           .getConfiguredResourceHandlerChain(conf, nmContext);
       if (LOG.isDebugEnabled()) {
-        final boolean enabled = resourceHandlerChain != null;
-        LOG.debug("Resource handler chain enabled = " + enabled);
+        LOG.debug("Resource handler chain enabled = " + (resourceHandlerChain
+            != null));
       }
       if (resourceHandlerChain != null) {
-        LOG.debug("Bootstrapping resource handler chain: " +
-            resourceHandlerChain);
+        LOG.debug("Bootstrapping resource handler chain");
         resourceHandlerChain.bootstrap(conf);
       }
     } catch (ResourceHandlerException e) {
@@ -388,8 +387,8 @@ public class LinuxContainerExecutor extends ContainerExecutor {
 
     List<String> localizerArgs = new ArrayList<>();
 
-    buildMainArgs(localizerArgs, user, appId, locId, nmAddr,
-        nmPrivateContainerTokensPath.getName(), localDirs);
+    buildMainArgs(localizerArgs, user, appId, locId, nmAddr, localDirs);
+
     Path containerLogDir = getContainerLogDir(dirsHandler, appId, locId);
     localizerArgs = replaceWithContainerLogDir(localizerArgs, containerLogDir);
 
@@ -447,10 +446,9 @@ public class LinuxContainerExecutor extends ContainerExecutor {
    */
   @VisibleForTesting
   public void buildMainArgs(List<String> command, String user, String appId,
-      String locId, InetSocketAddress nmAddr, String tokenFileName,
-      List<String> localDirs) {
+      String locId, InetSocketAddress nmAddr, List<String> localDirs) {
     ContainerLocalizer.buildMainArgs(command, user, appId, locId, nmAddr,
-        tokenFileName, localDirs, super.getConf());
+        localDirs, super.getConf());
   }
 
   @Override
@@ -613,7 +611,17 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       if (exitCode ==
           ExitCode.INVALID_CONTAINER_EXEC_PERMISSIONS.getExitCode() ||
           exitCode ==
-              ExitCode.INVALID_CONFIG_FILE.getExitCode()) {
+              ExitCode.INVALID_CONFIG_FILE.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_SCRIPT_COPY.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_CREDENTIALS_FILE.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_WORK_DIRECTORIES.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_APP_LOG_DIRECTORIES.getExitCode() ||
+          exitCode ==
+              ExitCode.COULD_NOT_CREATE_TMP_DIRECTORIES.getExitCode()) {
         throw new ConfigurationException(
             "Linux Container Executor reached unrecoverable exception", e);
       }
@@ -936,13 +944,12 @@ public class LinuxContainerExecutor extends ContainerExecutor {
       PrivilegedOperationExecutor privOpExecutor =
           PrivilegedOperationExecutor.getInstance(super.getConf());
       if (DockerCommandExecutor.isRemovable(
-          DockerCommandExecutor.getContainerStatus(containerId, privOpExecutor,
-              nmContext))) {
+          DockerCommandExecutor.getContainerStatus(containerId,
+              super.getConf(), privOpExecutor, nmContext))) {
         LOG.info("Removing Docker container : " + containerId);
-        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId,
-            ResourceHandlerModule.getCgroupsRelativeRoot());
+        DockerRmCommand dockerRmCommand = new DockerRmCommand(containerId);
         DockerCommandExecutor.executeDockerCommand(dockerRmCommand, containerId,
-            null, privOpExecutor, false, nmContext);
+            null, super.getConf(), privOpExecutor, false, nmContext);
       }
     } catch (ContainerExecutionException e) {
       LOG.warn("Unable to remove docker container: " + containerId);

@@ -25,10 +25,8 @@ import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -432,7 +430,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
    * Class used for tracking datanode level storage utilization similar
    * to {@link FSVolumeSet}
    */
-  static class SimulatedStorage {
+  private static class SimulatedStorage {
     private final Map<String, SimulatedBPStorage> map =
         new ConcurrentHashMap<>();
 
@@ -579,7 +577,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public StorageType getStorageType() {
-      return StorageType.DISK;
+      return null;
     }
 
     @Override
@@ -617,11 +615,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
 
     @Override
     public StorageLocation getStorageLocation() {
-      try {
-        return StorageLocation.parse("[DISK]file:///simulated");
-      } catch (Exception e) {
-        return null;
-      }
+      return null;
     }
 
     @Override
@@ -668,10 +662,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   private final String datanodeUuid;
   private final DataNode datanode;
   
-
-  public List<SimulatedStorage> getStorages() {
-    return storages;
-  }
 
   public SimulatedFSDataset(DataStorage storage, Configuration conf) {
     this(null, storage, conf);
@@ -1163,7 +1153,7 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
     return new ReplicaHandler(binfo, null);
   }
 
-  public synchronized InputStream getBlockInputStream(ExtendedBlock b)
+  protected synchronized InputStream getBlockInputStream(ExtendedBlock b)
       throws IOException {
     BInfo binfo = getBlockMap(b).get(b.getLocalBlock());
     if (binfo == null) {
@@ -1570,16 +1560,6 @@ public class SimulatedFSDataset implements FsDatasetSpi<FsVolumeSpi> {
   @Override
   public AutoCloseableLock acquireDatasetLock() {
     return datasetLock.acquire();
-  }
-
-  @Override
-  public Set<? extends Replica> deepCopyReplica(String bpid)
-      throws IOException {
-    Set<BInfo> replicas = new HashSet<>();
-    for (SimulatedStorage s : storages) {
-      replicas.addAll(s.getBlockMap(bpid).values());
-    }
-    return Collections.unmodifiableSet(replicas);
   }
 }
 

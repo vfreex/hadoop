@@ -441,10 +441,11 @@ public class ContainersMonitorImpl extends AbstractService implements
           ContainerId containerId = entry.getKey();
           ProcessTreeInfo ptInfo = entry.getValue();
           try {
+            String pId = ptInfo.getPID();
+
             // Initialize uninitialized process trees
             initializeProcessTrees(entry);
 
-            String pId = ptInfo.getPID();
             if (pId == null || !isResourceCalculatorAvailable()) {
               continue; // processTree cannot be tracked
             }
@@ -486,7 +487,7 @@ public class ContainersMonitorImpl extends AbstractService implements
           } catch (Exception e) {
             // Log the exception and proceed to the next container.
             LOG.warn("Uncaught exception in ContainersMonitorImpl "
-                + "while monitoring resource of {}", containerId, e);
+                + "while monitoring resource of " + containerId, e);
           }
         }
         if (LOG.isDebugEnabled()) {
@@ -804,12 +805,10 @@ public class ContainersMonitorImpl extends AbstractService implements
           vmemLimitMBs, pmemLimitMBs, cpuVcores);
       break;
     case STOP_MONITORING_CONTAINER:
-      ContainerStopMonitoringEvent stopEvent =
-          (ContainerStopMonitoringEvent) monitoringEvent;
       usageMetrics = ContainerMetrics.getContainerMetrics(
           containerId);
       if (usageMetrics != null) {
-        usageMetrics.finished(stopEvent.isForReInit());
+        usageMetrics.finished();
       }
       break;
     case CHANGE_MONITORING_CONTAINER_RESOURCE:

@@ -57,7 +57,6 @@ public class ActivitiesManager extends AbstractService {
   private Thread cleanUpThread;
   private int timeThreshold = 600 * 1000;
   private final RMContext rmContext;
-  private volatile boolean stopped;
 
   public ActivitiesManager(RMContext rmContext) {
     super(ActivitiesManager.class.getName());
@@ -114,7 +113,7 @@ public class ActivitiesManager extends AbstractService {
     cleanUpThread = new Thread(new Runnable() {
       @Override
       public void run() {
-        while (!stopped && !Thread.currentThread().isInterrupted()) {
+        while (true) {
           Iterator<Map.Entry<NodeId, List<NodeAllocation>>> ite =
               completedNodeAllocations.entrySet().iterator();
           while (ite.hasNext()) {
@@ -141,29 +140,20 @@ public class ActivitiesManager extends AbstractService {
 
           try {
             Thread.sleep(5000);
-          } catch (InterruptedException e) {
-            LOG.info(getName() + " thread interrupted");
-            break;
+          } catch (Exception e) {
+            // ignore
           }
         }
       }
     });
-    cleanUpThread.setName("ActivitiesManager thread.");
+
     cleanUpThread.start();
     super.serviceStart();
   }
 
   @Override
   protected void serviceStop() throws Exception {
-    stopped = true;
-    if (cleanUpThread != null) {
-      cleanUpThread.interrupt();
-      try {
-        cleanUpThread.join();
-      } catch (InterruptedException ie) {
-        LOG.warn("Interrupted Exception while stopping", ie);
-      }
-    }
+    cleanUpThread.interrupt();
     super.serviceStop();
   }
 

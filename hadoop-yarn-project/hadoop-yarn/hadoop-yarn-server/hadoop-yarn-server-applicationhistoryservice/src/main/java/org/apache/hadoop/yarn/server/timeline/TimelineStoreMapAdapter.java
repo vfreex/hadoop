@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.yarn.server.timeline;
 
-import java.io.Closeable;
 import java.util.Iterator;
 
 /**
@@ -49,7 +48,7 @@ interface TimelineStoreMapAdapter<K, V> {
   /**
    * @return the iterator of the value set of the map
    */
-  CloseableIterator<V> valueSetIterator();
+  Iterator<V> valueSetIterator();
 
   /**
    * Return the iterator of the value set of the map, starting from minV if type
@@ -57,9 +56,5 @@ interface TimelineStoreMapAdapter<K, V> {
    * @param minV
    * @return
    */
-  CloseableIterator<V> valueSetIterator(V minV);
-
-  interface CloseableIterator<V> extends Iterator<V>, Closeable {}
+  Iterator<V> valueSetIterator(V minV);
 }
-
-

@@ -27,6 +27,7 @@ import java.util.Set;
 
 import com.google.common.collect.Sets;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,7 +42,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.s3a.S3ATestUtils;
 import org.apache.hadoop.fs.s3a.Tristate;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.test.HadoopTestBase;
 
 /**
  * Main test class for MetadataStore implementations.
@@ -50,7 +50,7 @@ import org.apache.hadoop.test.HadoopTestBase;
  * If your implementation may return missing results for recently set paths,
  * override {@link MetadataStoreTestBase#allowMissing()}.
  */
-public abstract class MetadataStoreTestBase extends HadoopTestBase {
+public abstract class MetadataStoreTestBase extends Assert {
 
   private static final Logger LOG =
       LoggerFactory.getLogger(MetadataStoreTestBase.class);

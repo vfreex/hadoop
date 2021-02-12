@@ -46,8 +46,7 @@ public abstract class ApplicationAttemptStateData {
       String finalTrackingUrl, String diagnostics,
       FinalApplicationStatus amUnregisteredFinalStatus, int exitStatus,
       long finishTime, Map<String, Long> resourceSecondsMap,
-      Map<String, Long> preemptedResourceSecondsMap,
-      int totalAllocatedContainers) {
+      Map<String, Long> preemptedResourceSecondsMap) {
     ApplicationAttemptStateData attemptStateData =
         Records.newRecord(ApplicationAttemptStateData.class);
     attemptStateData.setAttemptId(attemptId);
@@ -75,7 +74,6 @@ public abstract class ApplicationAttemptStateData {
     attemptStateData.setResourceSecondsMap(resourceSecondsMap);
     attemptStateData
         .setPreemptedResourceSecondsMap(preemptedResourceSecondsMap);
-    attemptStateData.setTotalAllocatedContainers(totalAllocatedContainers);
     return attemptStateData;
   }
 
@@ -83,12 +81,10 @@ public abstract class ApplicationAttemptStateData {
       ApplicationAttemptId attemptId, Container masterContainer,
       Credentials attemptTokens, long startTime,
       Map<String, Long> resourceSeondsMap,
-      Map<String, Long> preemptedResourceSecondsMap,
-      int totalAllocatedContainers) {
+      Map<String, Long> preemptedResourceSecondsMap) {
     return newInstance(attemptId, masterContainer, attemptTokens, startTime,
         null, "N/A", "", null, ContainerExitStatus.INVALID, 0,
-        resourceSeondsMap, preemptedResourceSecondsMap,
-        totalAllocatedContainers);
+        resourceSeondsMap, preemptedResourceSecondsMap);
   }
 
 
@@ -280,24 +276,4 @@ public abstract class ApplicationAttemptStateData {
   @Unstable
   public abstract void setPreemptedResourceSecondsMap(
       Map<String, Long> preemptedResourceSecondsMap);
-
-  /**
-   * Get total number of containers allocated for this attempt.
-   *
-   * @return total number of containers allocated for this attempt.
-   */
-  @Public
-  @Unstable
-  public abstract int getTotalAllocatedContainers();
-
-  /**
-   * Set total number of containers allocated for this attempt.
-   *
-   * @param totalAllocatedContainers total number of containers
-   */
-  @Public
-  @Unstable
-  public abstract void setTotalAllocatedContainers(
-      int totalAllocatedContainers);
-
 }

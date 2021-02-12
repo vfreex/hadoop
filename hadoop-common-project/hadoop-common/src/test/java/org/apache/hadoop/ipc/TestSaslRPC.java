@@ -926,9 +926,7 @@ public class TestSaslRPC extends TestRpcBase {
   private static void assertAuthEquals(Pattern expect, String actual) {
     // this allows us to see the regexp and the value it didn't match
     if (!expect.matcher(actual).matches()) {
-      // it failed
-      fail(String.format("\"%s\" did not match pattern %s",
-          actual, expect));
+      fail(); // it failed
     }
   }
 

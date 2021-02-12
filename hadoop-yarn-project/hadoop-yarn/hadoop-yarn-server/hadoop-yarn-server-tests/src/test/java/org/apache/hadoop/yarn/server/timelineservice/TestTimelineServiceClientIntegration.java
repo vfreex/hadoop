@@ -81,8 +81,7 @@ public class TestTimelineServiceClientIntegration {
       auxService =
           PerNodeTimelineCollectorsAuxService.launchServer(new String[0],
               collectorManager, conf);
-      auxService
-          .addApplicationIfAbsent(ApplicationId.newInstance(0, 1), "user");
+      auxService.addApplication(ApplicationId.newInstance(0, 1), "user");
     } catch (ExitUtil.ExitException e) {
       fail();
     }

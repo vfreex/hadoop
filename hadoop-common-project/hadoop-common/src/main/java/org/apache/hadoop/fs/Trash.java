@@ -120,12 +120,6 @@ public class Trash extends Configured {
     trashPolicy.deleteCheckpoint();
   }
 
-  /** Delete all trash immediately. */
-  public void expungeImmediately() throws IOException {
-    trashPolicy.createCheckpoint();
-    trashPolicy.deleteCheckpointsImmediately();
-  }
-
   /** get the current working directory */
   Path getCurrentTrashDir() throws IOException {
     return trashPolicy.getCurrentTrashDir();

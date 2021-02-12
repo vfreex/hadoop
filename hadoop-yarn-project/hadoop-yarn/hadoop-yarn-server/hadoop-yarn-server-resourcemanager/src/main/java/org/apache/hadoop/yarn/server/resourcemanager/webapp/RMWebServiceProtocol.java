@@ -46,7 +46,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ApplicationSubmi
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.AppsInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterMetricsInfo;
-import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.ClusterUserInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.DelegationToken;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.LabelsToNodesInfo;
 import org.apache.hadoop.yarn.server.resourcemanager.webapp.dao.NodeInfo;
@@ -88,15 +87,6 @@ public interface RMWebServiceProtocol {
    * @return the cluster information
    */
   ClusterInfo getClusterInfo();
-
-
-  /**
-   * This method retrieves the cluster user information, and it is reachable by using
-   * {@link RMWSConsts#CLUSTER_USER_INFO}.
-   *
-   * @return the cluster user information
-   */
-  ClusterUserInfo getClusterUserInfo(HttpServletRequest hsr);
 
   /**
    * This method retrieves the cluster metrics information, and it is reachable

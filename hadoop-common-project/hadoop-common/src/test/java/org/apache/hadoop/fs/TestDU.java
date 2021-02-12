@@ -17,12 +17,10 @@
  */
 package org.apache.hadoop.fs;
 
-import org.apache.hadoop.util.Shell;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assert.*;
-import static org.junit.Assume.assumeFalse;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +37,6 @@ public class TestDU {
 
   @Before
   public void setUp() {
-    assumeFalse(Shell.WINDOWS);
     FileUtil.fullyDelete(DU_DIR);
     assertTrue(DU_DIR.mkdirs());
   }

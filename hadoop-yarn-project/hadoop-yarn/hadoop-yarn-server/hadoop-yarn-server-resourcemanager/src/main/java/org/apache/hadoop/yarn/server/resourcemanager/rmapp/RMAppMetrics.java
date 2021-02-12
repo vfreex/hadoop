@@ -30,19 +30,16 @@ public class RMAppMetrics {
   final int numAMContainersPreempted;
   private final Map<String, Long> resourceSecondsMap;
   private final Map<String, Long> preemptedResourceSecondsMap;
-  private int totalAllocatedContainers;
 
   public RMAppMetrics(Resource resourcePreempted,
       int numNonAMContainersPreempted, int numAMContainersPreempted,
       Map<String, Long> resourceSecondsMap,
-      Map<String, Long> preemptedResourceSecondsMap,
-      int totalAllocatedContainers) {
+      Map<String, Long> preemptedResourceSecondsMap) {
     this.resourcePreempted = resourcePreempted;
     this.numNonAMContainersPreempted = numNonAMContainersPreempted;
     this.numAMContainersPreempted = numAMContainersPreempted;
     this.resourceSecondsMap = resourceSecondsMap;
     this.preemptedResourceSecondsMap = preemptedResourceSecondsMap;
-    this.totalAllocatedContainers = totalAllocatedContainers;
   }
 
   public Resource getResourcePreempted() {
@@ -86,7 +83,4 @@ public class RMAppMetrics {
     return preemptedResourceSecondsMap;
   }
 
-  public int getTotalAllocatedContainers() {
-    return totalAllocatedContainers;
-  }
 }

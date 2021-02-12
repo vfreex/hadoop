@@ -18,12 +18,7 @@
 * limitations under the License.
 -->
 
-<!DOCTYPE cross-domain-policy [
-  <!ELEMENT cross-domain-policy (site-control)*>
-  <!ELEMENT site-control (#PCDATA)>
-  <!ATTLIST site-control
-          permitted-cross-domain-policies CDATA #REQUIRED>
-  ]>
+<!DOCTYPE cross-domain-policy SYSTEM "http://www.adobe.com/xml/dtds/cross-domain-policy.dtd">
 <cross-domain-policy>
   <!-- Read this: www.adobe.com/devnet/articles/crossdomain_policy_file_spec.html -->
 

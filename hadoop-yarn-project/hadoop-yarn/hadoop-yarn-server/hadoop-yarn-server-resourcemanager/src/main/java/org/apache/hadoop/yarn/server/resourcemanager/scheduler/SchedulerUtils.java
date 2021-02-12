@@ -276,29 +276,6 @@ public class SchedulerUtils {
   }
 
   /**
-   * If RM should enforce partition exclusivity for enforced partition "x":
-   * 1) If request is "x" and app label is not "x",
-   *    override request to app's label.
-   * 2) If app label is "x", ensure request is "x".
-   * @param resReq resource request
-   * @param enforcedPartitions list of exclusive enforced partitions
-   * @param appLabel app's node label expression
-   */
-  public static void enforcePartitionExclusivity(ResourceRequest resReq,
-      Set<String> enforcedPartitions, String appLabel) {
-    if (enforcedPartitions == null || enforcedPartitions.isEmpty()) {
-      return;
-    }
-    if (!enforcedPartitions.contains(appLabel)
-        && enforcedPartitions.contains(resReq.getNodeLabelExpression())) {
-      resReq.setNodeLabelExpression(appLabel);
-    }
-    if (enforcedPartitions.contains(appLabel)) {
-      resReq.setNodeLabelExpression(appLabel);
-    }
-  }
-
-  /**
    * Utility method to validate a resource request, by insuring that the
    * requested memory/vcore is non-negative and not greater than max
    * 
@@ -493,11 +470,6 @@ public class SchedulerUtils {
 
   public static RMContainer createOpportunisticRmContainer(RMContext rmContext,
       Container container, boolean isRemotelyAllocated) {
-    SchedulerNode node = ((AbstractYarnScheduler) rmContext.getScheduler())
-        .getNode(container.getNodeId());
-    if (node == null) {
-      return null;
-    }
     SchedulerApplicationAttempt appAttempt =
         ((AbstractYarnScheduler) rmContext.getScheduler())
             .getCurrentAttemptForContainer(container.getId());
@@ -506,7 +478,8 @@ public class SchedulerUtils {
         appAttempt.getApplicationAttemptId(), container.getNodeId(),
         appAttempt.getUser(), rmContext, isRemotelyAllocated);
     appAttempt.addRMContainer(container.getId(), rmContainer);
-    node.allocateContainer(rmContainer);
+    ((AbstractYarnScheduler) rmContext.getScheduler()).getNode(
+        container.getNodeId()).allocateContainer(rmContainer);
     return rmContainer;
   }
 }

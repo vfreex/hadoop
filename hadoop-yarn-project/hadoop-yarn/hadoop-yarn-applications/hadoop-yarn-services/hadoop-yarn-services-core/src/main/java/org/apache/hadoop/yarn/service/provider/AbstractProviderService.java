@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.service.api.records.Service;
-import org.apache.hadoop.yarn.service.component.ComponentRestartPolicy;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConstants;
 import org.apache.hadoop.yarn.service.containerlaunch.ContainerLaunchService;
@@ -56,8 +55,7 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public abstract void processArtifact(AbstractLauncher launcher,
       ComponentInstance compInstance, SliderFileSystem fileSystem,
-      Service service,
-      ContainerLaunchService.ComponentLaunchContext compLaunchCtx)
+      Service service)
       throws IOException;
 
   public Map<String, String> buildContainerTokens(ComponentInstance instance,
@@ -118,22 +116,18 @@ public abstract class AbstractProviderService implements ProviderService,
 
   public void buildContainerRetry(AbstractLauncher launcher,
       Configuration yarnConf,
-      ContainerLaunchService.ComponentLaunchContext compLaunchContext,
-      ComponentInstance instance) {
+      ContainerLaunchService.ComponentLaunchContext compLaunchContext) {
     // By default retry forever every 30 seconds
-
-    ComponentRestartPolicy restartPolicy = instance.getComponent()
-        .getRestartPolicyHandler();
-    if (restartPolicy.allowContainerRetriesForInstance(instance)) {
-      launcher.setRetryContext(YarnServiceConf
-          .getInt(CONTAINER_RETRY_MAX, DEFAULT_CONTAINER_RETRY_MAX,
-              compLaunchContext.getConfiguration(), yarnConf), YarnServiceConf
-          .getInt(CONTAINER_RETRY_INTERVAL, DEFAULT_CONTAINER_RETRY_INTERVAL,
-              compLaunchContext.getConfiguration(), yarnConf), YarnServiceConf
-          .getLong(CONTAINER_FAILURES_VALIDITY_INTERVAL,
-              DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL,
-              compLaunchContext.getConfiguration(), yarnConf));
-    }
+    launcher.setRetryContext(
+        YarnServiceConf.getInt(CONTAINER_RETRY_MAX,
+            DEFAULT_CONTAINER_RETRY_MAX,
+            compLaunchContext.getConfiguration(), yarnConf),
+        YarnServiceConf.getInt(CONTAINER_RETRY_INTERVAL,
+            DEFAULT_CONTAINER_RETRY_INTERVAL,
+            compLaunchContext.getConfiguration(), yarnConf),
+        YarnServiceConf.getLong(CONTAINER_FAILURES_VALIDITY_INTERVAL,
+            DEFAULT_CONTAINER_FAILURES_VALIDITY_INTERVAL,
+            compLaunchContext.getConfiguration(), yarnConf));
   }
 
   public void buildContainerLaunchContext(AbstractLauncher launcher,
@@ -141,7 +135,7 @@ public abstract class AbstractProviderService implements ProviderService,
       SliderFileSystem fileSystem, Configuration yarnConf, Container container,
       ContainerLaunchService.ComponentLaunchContext compLaunchContext)
       throws IOException, SliderException {
-    processArtifact(launcher, instance, fileSystem, service, compLaunchContext);
+    processArtifact(launcher, instance, fileSystem, service);
 
     ServiceContext context =
         instance.getComponent().getScheduler().getContext();
@@ -167,6 +161,6 @@ public abstract class AbstractProviderService implements ProviderService,
         yarnConf, container, compLaunchContext, tokensForSubstitution);
 
     // Setup container retry settings
-    buildContainerRetry(launcher, yarnConf, compLaunchContext, instance);
+    buildContainerRetry(launcher, yarnConf, compLaunchContext);
   }
 }

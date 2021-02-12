@@ -58,7 +58,7 @@
               <td>Link to Logs</td>
               <td>
                 {{log-files-comma nodeId=model.nodeInfo.id
-                    nodeAddr=encodedNodeAddr
+                    nodeAddr=model.nodeInfo.addr
                     containerId=model.nodeContainer.containerId
                     logFiles=model.nodeContainer.containerLogFiles}}
               </td>

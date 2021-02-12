@@ -85,7 +85,6 @@ public class UsersManager implements AbstractUsersManager {
 
   private final QueueMetrics metrics;
   private AtomicInteger activeUsers = new AtomicInteger(0);
-  private AtomicInteger activeUsersWithOnlyPendingApps = new AtomicInteger(0);
   private Map<String, Set<ApplicationId>> usersApplications =
       new HashMap<String, Set<ApplicationId>>();
 
@@ -672,21 +671,7 @@ public class UsersManager implements AbstractUsersManager {
     // update in local storage
     userLimitPerSchedulingMode.put(schedulingMode, computedUserLimit);
 
-    computeNumActiveUsersWithOnlyPendingApps();
-
     return userLimitPerSchedulingMode;
-  }
-
-  // This method is called within the lock.
-  private void computeNumActiveUsersWithOnlyPendingApps() {
-    int numPendingUsers = 0;
-    for (User user : users.values()) {
-      if ((user.getPendingApplications() > 0)
-          && (user.getActiveApplications() <= 0)) {
-        numPendingUsers++;
-      }
-    }
-    activeUsersWithOnlyPendingApps = new AtomicInteger(numPendingUsers);
   }
 
   private Resource computeUserLimit(String userName, Resource clusterResource,
@@ -854,11 +839,6 @@ public class UsersManager implements AbstractUsersManager {
     try {
       this.writeLock.lock();
 
-      User userDesc = getUser(user);
-      if (userDesc != null && userDesc.getActiveApplications() <= 0) {
-        return;
-      }
-
       Set<ApplicationId> userApps = usersApplications.get(user);
       if (userApps == null) {
         userApps = new HashSet<ApplicationId>();
@@ -913,7 +893,7 @@ public class UsersManager implements AbstractUsersManager {
 
   @Override
   public int getNumActiveUsers() {
-    return activeUsers.get() + activeUsersWithOnlyPendingApps.get();
+    return activeUsers.get();
   }
 
   float sumActiveUsersTimesWeights() {
@@ -1109,10 +1089,5 @@ public class UsersManager implements AbstractUsersManager {
     } finally {
       this.writeLock.unlock();
     }
-  }
-
-  @VisibleForTesting
-  public int getNumActiveUsersWithOnlyPendingApps() {
-    return activeUsersWithOnlyPendingApps.get();
   }
 }

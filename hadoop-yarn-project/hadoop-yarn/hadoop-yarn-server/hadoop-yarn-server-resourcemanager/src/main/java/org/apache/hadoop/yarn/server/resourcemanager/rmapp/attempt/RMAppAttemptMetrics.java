@@ -230,10 +230,6 @@ public class RMAppAttemptMetrics {
     return this.totalAllocatedContainers;
   }
 
-  public void setTotalAllocatedContainers(int totalAllocatedContainers) {
-    this.totalAllocatedContainers = totalAllocatedContainers;
-  }
-
   public Resource getApplicationAttemptHeadroom() {
     return Resource.newInstance(applicationHeadroom);
   }

@@ -81,7 +81,6 @@ public class AMLauncher implements Runnable {
   private final AMLauncherEventType eventType;
   private final RMContext rmContext;
   private final Container masterContainer;
-  private boolean timelineServiceV2Enabled;
 
   @SuppressWarnings("rawtypes")
   private final EventHandler handler;
@@ -94,8 +93,6 @@ public class AMLauncher implements Runnable {
     this.rmContext = rmContext;
     this.handler = rmContext.getDispatcher().getEventHandler();
     this.masterContainer = application.getMasterContainer();
-    this.timelineServiceV2Enabled = YarnConfiguration.
-        timelineServiceV2Enabled(conf);
   }
 
   private void connect() throws IOException {
@@ -242,7 +239,7 @@ public class AMLauncher implements Runnable {
   }
 
   private void setFlowContext(ContainerLaunchContext container) {
-    if (timelineServiceV2Enabled) {
+    if (YarnConfiguration.timelineServiceV2Enabled(conf)) {
       Map<String, String> environment = container.getEnvironment();
       ApplicationId applicationId =
           application.getAppAttemptId().getApplicationId();
@@ -310,7 +307,7 @@ public class AMLauncher implements Runnable {
         LOG.info("Launching master" + application.getAppAttemptId());
         launch();
         handler.handle(new RMAppAttemptEvent(application.getAppAttemptId(),
-            RMAppAttemptEventType.LAUNCHED, System.currentTimeMillis()));
+            RMAppAttemptEventType.LAUNCHED));
       } catch(Exception ie) {
         onAMLaunchFailed(masterContainer.getId(), ie);
       }

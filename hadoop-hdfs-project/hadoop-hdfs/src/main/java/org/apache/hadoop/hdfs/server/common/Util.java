@@ -96,7 +96,8 @@ public final class Util {
 
     // if URI is null or scheme is undefined, then assume it's file://
     if(u == null || u.getScheme() == null){
-      LOG.info("Assuming 'file' scheme for path " + s + " in configuration.");
+      LOG.warn("Path " + s + " should be specified as a URI "
+          + "in configuration files. Please update hdfs configuration.");
       u = fileAsURI(new File(s));
     }
     return u;
