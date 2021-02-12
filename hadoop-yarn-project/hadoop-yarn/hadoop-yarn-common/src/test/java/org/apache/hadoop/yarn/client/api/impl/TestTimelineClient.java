@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
@@ -61,8 +62,6 @@ public class TestTimelineClient {
 
   private TimelineClientImpl client;
   private TimelineWriter spyTimelineWriter;
-  private String keystoresDir;
-  private String sslConfDir;
 
   @Before
   public void setup() {
@@ -73,12 +72,9 @@ public class TestTimelineClient {
   }
 
   @After
-  public void tearDown() throws Exception {
+  public void tearDown() {
     if (client != null) {
       client.stop();
-    }
-    if (isSSLConfigured()) {
-      KeyStoreTestUtil.cleanupSSLConfig(keystoresDir, sslConfDir);
     }
   }
 
@@ -458,7 +454,11 @@ public class TestTimelineClient {
     conf.setInt(YarnConfiguration.TIMELINE_SERVICE_CLIENT_MAX_RETRIES, 0);
     conf.set(YarnConfiguration.YARN_HTTP_POLICY_KEY, Policy.HTTPS_ONLY.name());
 
-    setupSSLConfig(conf);
+    File testDir = TestGenericTestUtils.getTestDir();
+    String sslConfDir =
+        KeyStoreTestUtil.getClasspathDir(TestTimelineClient.class);
+    KeyStoreTestUtil.setupSSLConfig(testDir.getAbsolutePath(),
+        sslConfDir, conf, false);
     client = createTimelineClient(conf);
 
     ThreadGroup threadGroup = Thread.currentThread().getThreadGroup();
@@ -490,17 +490,6 @@ public class TestTimelineClient {
       Thread.sleep(1000);
     }
     Assert.assertFalse("Reloader is still alive", reloaderStillAlive);
-  }
-
-  private void setupSSLConfig(YarnConfiguration conf) throws Exception {
-    keystoresDir = TestGenericTestUtils.getTestDir().getAbsolutePath();
-    sslConfDir =
-        KeyStoreTestUtil.getClasspathDir(TestTimelineClient.class);
-    KeyStoreTestUtil.setupSSLConfig(keystoresDir, sslConfDir, conf, false);
-  }
-
-  private boolean isSSLConfigured() {
-    return keystoresDir != null && sslConfDir != null;
   }
 
   private static class TestTimelineDelegationTokenSecretManager extends

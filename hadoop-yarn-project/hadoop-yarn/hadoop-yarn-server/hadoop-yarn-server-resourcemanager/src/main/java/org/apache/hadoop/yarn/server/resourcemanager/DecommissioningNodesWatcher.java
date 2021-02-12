@@ -207,11 +207,6 @@ public class DecommissioningNodesWatcher {
     }
   }
 
-  public void stop() {
-    pollTimer.cancel();
-    pollTimer = null;
-  }
-
   /**
    * Status about a specific decommissioning node.
    *

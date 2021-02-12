@@ -20,8 +20,6 @@ package org.apache.hadoop.crypto.key.kms;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
-import java.net.ConnectException;
-import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -29,23 +27,18 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import javax.net.ssl.SSLHandshakeException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.CryptoExtension;
 import org.apache.hadoop.crypto.key.KeyProviderCryptoExtension.EncryptedKeyVersion;
 import org.apache.hadoop.crypto.key.KeyProviderDelegationTokenExtension;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.retry.RetryPolicies;
 import org.apache.hadoop.io.retry.RetryPolicy;
 import org.apache.hadoop.io.retry.RetryPolicy.RetryAction;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
-import org.apache.hadoop.util.KMSUtil;
 import org.apache.hadoop.util.Time;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,42 +73,19 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
 
   private final KMSClientProvider[] providers;
   private final AtomicInteger currentIdx;
-  private final Text dtService; // service in token.
-  private final Text canonicalService; // credentials alias for token.
 
   private RetryPolicy retryPolicy = null;
 
-  public LoadBalancingKMSClientProvider(URI providerUri,
-      KMSClientProvider[] providers, Configuration conf) {
-    this(providerUri, providers, Time.monotonicNow(), conf);
+  public LoadBalancingKMSClientProvider(KMSClientProvider[] providers,
+      Configuration conf) {
+    this(shuffle(providers), Time.monotonicNow(), conf);
   }
 
   @VisibleForTesting
   LoadBalancingKMSClientProvider(KMSClientProvider[] providers, long seed,
       Configuration conf) {
-    this(URI.create("kms://testing"), providers, seed, conf);
-  }
-
-  private LoadBalancingKMSClientProvider(URI uri,
-      KMSClientProvider[] providers, long seed, Configuration conf) {
     super(conf);
-    // uri is the token service so it can be instantiated for renew/cancel.
-    dtService = KMSClientProvider.getDtService(uri);
-    // if provider not in conf, new client will alias on uri else addr.
-    if (KMSUtil.getKeyProviderUri(conf) == null) {
-      canonicalService = dtService;
-    } else {
-      // canonical service (credentials alias) will be the first underlying
-      // provider's service.  must be deterministic before shuffle so multiple
-      // calls for a token do not obtain another unnecessary token.
-      canonicalService = new Text(providers[0].getCanonicalServiceName());
-    }
-
-    // shuffle unless seed is 0 which is used by tests for determinism.
-    this.providers = (seed != 0) ? shuffle(providers) : providers;
-    for (KMSClientProvider provider : providers) {
-      provider.setClientTokenProvider(this);
-    }
+    this.providers = providers;
     this.currentIdx = new AtomicInteger((int)(seed % providers.length));
     int maxNumRetries = conf.getInt(CommonConfigurationKeysPublic.
         KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, providers.length);
@@ -133,9 +103,6 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     this.retryPolicy = RetryPolicies.failoverOnNetworkException(
         RetryPolicies.TRY_ONCE_THEN_FAIL, maxNumRetries, 0, sleepBaseMillis,
         sleepMaxMillis);
-    LOG.debug("Created LoadBalancingKMSClientProvider for KMS url: {} with {} "
-            + "providers. delegation token service: {}, canonical service: {}",
-        uri, providers.length, dtService, canonicalService);
   }
 
   @VisibleForTesting
@@ -143,28 +110,12 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
     return providers;
   }
 
-  @Override
-  public org.apache.hadoop.security.token.Token<? extends TokenIdentifier>
-      selectDelegationToken(Credentials creds) {
-    Token<? extends TokenIdentifier> token =
-        KMSClientProvider.selectDelegationToken(creds, canonicalService);
-    // fallback to querying each sub-provider.
-    if (token == null) {
-      for (KMSClientProvider provider : getProviders()) {
-        token = provider.selectDelegationToken(creds);
-        if (token != null) {
-          break;
-        }
-      }
-    }
-    return token;
-  }
-
-  private <T> T doOp(ProviderCallable<T> op, int currPos,
-      boolean isIdempotent) throws IOException {
+  private <T> T doOp(ProviderCallable<T> op, int currPos)
+      throws IOException {
     if (providers.length == 0) {
       throw new IOException("No providers configured !");
     }
+    IOException ex = null;
     int numFailovers = 0;
     for (int i = 0;; i++, numFailovers++) {
       KMSClientProvider provider = providers[(currPos + i) % providers.length];
@@ -179,18 +130,11 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       } catch (IOException ioe) {
         LOG.warn("KMS provider at [{}] threw an IOException: ",
             provider.getKMSUrl(), ioe);
-        // SSLHandshakeException can occur here because of lost connection
-        // with the KMS server, creating a ConnectException from it,
-        // so that the FailoverOnNetworkExceptionRetry policy will retry
-        if (ioe instanceof SSLHandshakeException) {
-          Exception cause = ioe;
-          ioe = new ConnectException("SSLHandshakeException: "
-              + cause.getMessage());
-          ioe.initCause(cause);
-        }
+        ex = ioe;
+
         RetryAction action = null;
         try {
-          action = retryPolicy.shouldRetry(ioe, 0, numFailovers, isIdempotent);
+          action = retryPolicy.shouldRetry(ioe, 0, numFailovers, false);
         } catch (Exception e) {
           if (e instanceof IOException) {
             throw (IOException)e;
@@ -209,7 +153,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
                   CommonConfigurationKeysPublic.
                   KMS_CLIENT_FAILOVER_MAX_RETRIES_KEY, providers.length),
               providers.length);
-          throw ioe;
+          throw ex;
         }
         if (((numFailovers + 1) % providers.length) == 0) {
           // Sleep only after we try all the providers for every cycle.
@@ -240,23 +184,15 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
   }
 
   @Override
-  public String getCanonicalServiceName() {
-    return canonicalService.toString();
-  }
-
-  @Override
-  public Token<?> getDelegationToken(String renewer) throws IOException {
-    return doOp(new ProviderCallable<Token<?>>() {
+  public Token<?>[]
+      addDelegationTokens(final String renewer, final Credentials credentials)
+          throws IOException {
+    return doOp(new ProviderCallable<Token<?>[]>() {
       @Override
-      public Token<?> call(KMSClientProvider provider) throws IOException {
-        Token<?> token = provider.getDelegationToken(renewer);
-        // override sub-providers service with our own so it can be used
-        // across all providers.
-        token.setService(dtService);
-        LOG.debug("New token service set. Token: ({})", token);
-        return token;
+      public Token<?>[] call(KMSClientProvider provider) throws IOException {
+        return provider.addDelegationTokens(renewer, credentials);
       }
-    }, nextIdx(), false);
+    }, nextIdx());
   }
 
   @Override
@@ -266,7 +202,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public Long call(KMSClientProvider provider) throws IOException {
         return provider.renewDelegationToken(token);
       }
-    }, nextIdx(), false);
+    }, nextIdx());
   }
 
   @Override
@@ -277,7 +213,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         provider.cancelDelegationToken(token);
         return null;
       }
-    }, nextIdx(), false);
+    }, nextIdx());
   }
 
   // This request is sent to all providers in the load-balancing group
@@ -330,7 +266,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
             throws IOException, GeneralSecurityException {
           return provider.generateEncryptedKey(encryptionKeyName);
         }
-      }, nextIdx(), true);
+      }, nextIdx());
     } catch (WrapperException we) {
       if (we.getCause() instanceof GeneralSecurityException) {
         throw (GeneralSecurityException) we.getCause();
@@ -350,7 +286,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
             throws IOException, GeneralSecurityException {
           return provider.decryptEncryptedKey(encryptedKeyVersion);
         }
-      }, nextIdx(), true);
+      }, nextIdx());
     } catch (WrapperException we) {
       if (we.getCause() instanceof GeneralSecurityException) {
         throw (GeneralSecurityException) we.getCause();
@@ -370,7 +306,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
             throws IOException, GeneralSecurityException {
           return provider.reencryptEncryptedKey(ekv);
         }
-      }, nextIdx(), true);
+      }, nextIdx());
     } catch (WrapperException we) {
       if (we.getCause() instanceof GeneralSecurityException) {
         throw (GeneralSecurityException) we.getCause();
@@ -390,7 +326,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
           provider.reencryptEncryptedKeys(ekvs);
           return null;
         }
-      }, nextIdx(), true);
+      }, nextIdx());
     } catch (WrapperException we) {
       if (we.getCause() instanceof GeneralSecurityException) {
         throw (GeneralSecurityException) we.getCause();
@@ -406,7 +342,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public KeyVersion call(KMSClientProvider provider) throws IOException {
         return provider.getKeyVersion(versionName);
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
 
   @Override
@@ -416,7 +352,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public List<String> call(KMSClientProvider provider) throws IOException {
         return provider.getKeys();
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
 
   @Override
@@ -426,7 +362,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public Metadata[] call(KMSClientProvider provider) throws IOException {
         return provider.getKeysMetadata(names);
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
 
   @Override
@@ -437,7 +373,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
           throws IOException {
         return provider.getKeyVersions(name);
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
 
   @Override
@@ -447,9 +383,8 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public KeyVersion call(KMSClientProvider provider) throws IOException {
         return provider.getCurrentKey(name);
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
-
   @Override
   public Metadata getMetadata(final String name) throws IOException {
     return doOp(new ProviderCallable<Metadata>() {
@@ -457,7 +392,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public Metadata call(KMSClientProvider provider) throws IOException {
         return provider.getMetadata(name);
       }
-    }, nextIdx(), true);
+    }, nextIdx());
   }
 
   @Override
@@ -468,7 +403,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public KeyVersion call(KMSClientProvider provider) throws IOException {
         return provider.createKey(name, material, options);
       }
-    }, nextIdx(), false);
+    }, nextIdx());
   }
 
   @Override
@@ -481,7 +416,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
             NoSuchAlgorithmException {
           return provider.createKey(name, options);
         }
-      }, nextIdx(), false);
+      }, nextIdx());
     } catch (WrapperException e) {
       if (e.getCause() instanceof GeneralSecurityException) {
         throw (NoSuchAlgorithmException) e.getCause();
@@ -498,7 +433,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
         provider.deleteKey(name);
         return null;
       }
-    }, nextIdx(), false);
+    }, nextIdx());
   }
 
   @Override
@@ -509,7 +444,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
       public KeyVersion call(KMSClientProvider provider) throws IOException {
         return provider.rollNewVersion(name, material);
       }
-    }, nextIdx(), false);
+    }, nextIdx());
     invalidateCache(name);
     return newVersion;
   }
@@ -524,7 +459,7 @@ public class LoadBalancingKMSClientProvider extends KeyProvider implements
             NoSuchAlgorithmException {
           return provider.rollNewVersion(name);
         }
-      }, nextIdx(), false);
+      }, nextIdx());
       invalidateCache(name);
       return newVersion;
     } catch (WrapperException e) {

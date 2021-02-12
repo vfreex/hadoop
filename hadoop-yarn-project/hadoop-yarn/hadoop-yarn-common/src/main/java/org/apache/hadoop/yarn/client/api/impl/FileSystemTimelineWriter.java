@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.client.api.impl;
 import java.io.Closeable;
 import java.io.Flushable;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -375,8 +374,7 @@ public class FileSystemTimelineWriter extends TimelineWriter{
 
     protected void prepareForWrite() throws IOException{
       this.stream = createLogFileStream(fs, logPath);
-      this.jsonGenerator =
-          new JsonFactory().createGenerator((OutputStream) stream);
+      this.jsonGenerator = new JsonFactory().createGenerator(stream);
       this.jsonGenerator.setPrettyPrinter(new MinimalPrettyPrinter("\n"));
       this.lastModifiedTime = Time.monotonicNow();
     }

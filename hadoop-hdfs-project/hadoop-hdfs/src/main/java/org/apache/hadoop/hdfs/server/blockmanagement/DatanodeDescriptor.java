@@ -373,7 +373,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Updates stats from datanode heartbeat.
    */
-  void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
+  public void updateHeartbeat(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
       VolumeFailureSummary volumeFailureSummary) {
     updateHeartbeatState(reports, cacheCapacity, cacheUsed, xceiverCount,
@@ -384,7 +384,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * process datanode heartbeat or stats initialization.
    */
-  void updateHeartbeatState(StorageReport[] reports, long cacheCapacity,
+  public void updateHeartbeatState(StorageReport[] reports, long cacheCapacity,
       long cacheUsed, int xceiverCount, int volFailures,
       VolumeFailureSummary volumeFailureSummary) {
     updateStorageStats(reports, cacheCapacity, cacheUsed, xceiverCount,
@@ -451,11 +451,8 @@ public class DatanodeDescriptor extends DatanodeInfo {
     this.volumeFailureSummary = volumeFailureSummary;
     for (StorageReport report : reports) {
 
-      DatanodeStorageInfo storage = null;
-      synchronized (storageMap) {
-        storage =
-            storageMap.get(report.getStorage().getStorageID());
-      }
+      DatanodeStorageInfo storage =
+          storageMap.get(report.getStorage().getStorageID());
       if (checkFailedStorages) {
         failedStorageInfos.remove(storage);
       }
@@ -643,9 +640,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
   /**
    * Store block replication work.
    */
-  @VisibleForTesting
-  public void addBlockToBeReplicated(Block block,
-      DatanodeStorageInfo[] targets) {
+  void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
     assert(block != null && targets != null && targets.length > 0);
     replicateBlocks.offer(new BlockTargetPair(block, targets));
   }
@@ -703,8 +698,7 @@ public class DatanodeDescriptor extends DatanodeInfo {
     return erasurecodeBlocks.size();
   }
 
-  @VisibleForTesting
-  public int getNumberOfReplicateBlocks() {
+  int getNumberOfReplicateBlocks() {
     return replicateBlocks.size();
   }
 

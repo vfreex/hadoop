@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.hdfs.server.namenode;
 
-import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_CALLER_CONTEXT_ENABLED_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
 import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
 import static org.hamcrest.CoreMatchers.either;
@@ -90,7 +89,7 @@ public class TestFSNamesystem {
     LeaseManager leaseMan = fsn.getLeaseManager();
     leaseMan.addLease("client1", fsn.getFSDirectory().allocateNewInodeId());
     assertEquals(1, leaseMan.countLease());
-    clearNamesystem(fsn);
+    fsn.clear();
     leaseMan = fsn.getLeaseManager();
     assertEquals(0, leaseMan.countLease());
   }
@@ -185,22 +184,13 @@ public class TestFSNamesystem {
     FSNamesystem fsn = new FSNamesystem(conf, fsImage);
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
-    clearNamesystem(fsn);
+    fsn.clear();
+    assertFalse(fsn.isImageLoaded());
     final INodeDirectory root = (INodeDirectory) fsn.getFSDirectory()
             .getINode("/");
     assertTrue(root.getChildrenList(Snapshot.CURRENT_STATE_ID).isEmpty());
     fsn.imageLoadComplete();
     assertTrue(fsn.isImageLoaded());
-  }
-
-  private void clearNamesystem(FSNamesystem fsn) {
-    fsn.writeLock();
-    try {
-      fsn.clear();
-      assertFalse(fsn.isImageLoaded());
-    } finally {
-      fsn.writeUnlock();
-    }
   }
 
   @Test
@@ -252,14 +242,10 @@ public class TestFSNamesystem {
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");
     // Disable top logger
     conf.setBoolean(DFSConfigKeys.NNTOP_ENABLED_KEY, false);
-    conf.setBoolean(HADOOP_CALLER_CONTEXT_ENABLED_KEY, true);
     fsn = new FSNamesystem(conf, fsImage);
     auditLoggers = fsn.getAuditLoggers();
     assertTrue(auditLoggers.size() == 1);
     assertTrue(auditLoggers.get(0) instanceof FSNamesystem.DefaultAuditLogger);
-    FSNamesystem.DefaultAuditLogger defaultAuditLogger =
-        (FSNamesystem.DefaultAuditLogger) auditLoggers.get(0);
-    assertTrue(defaultAuditLogger.getCallerContextEnabled());
 
     // Not to specify any audit loggers in config
     conf.set(DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY, "");

@@ -130,9 +130,8 @@ public class Invoker {
   }
 
   /**
-   * Execute an operation and ignore all raised IOExceptions; log at INFO;
-   * full stack only at DEBUG.
-   * @param log log to use.
+   * Execute an operation and ignore all raised IOExceptions; log at INFO.
+   * @param log log to log at info.
    * @param action action to include in log
    * @param path optional path to include in log
    * @param operation operation to execute
@@ -146,17 +145,13 @@ public class Invoker {
     try {
       once(action, path, operation);
     } catch (IOException e) {
-      String description = toDescription(action, path);
-      String error = e.toString();
-      log.info("{}: {}", description, error);
-      log.debug("{}", description, e);
+      log.info("{}: {}", toDescription(action, path), e.toString(), e);
     }
   }
 
   /**
-   * Execute an operation and ignore all raised IOExceptions; log at INFO;
-   * full stack only at DEBUG.
-   * @param log log to use.
+   * Execute an operation and ignore all raised IOExceptions; log at INFO.
+   * @param log log to log at info.
    * @param action action to include in log
    * @param path optional path to include in log
    * @param operation operation to execute

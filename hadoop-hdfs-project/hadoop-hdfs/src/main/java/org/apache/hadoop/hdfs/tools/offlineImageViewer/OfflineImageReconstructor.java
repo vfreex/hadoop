@@ -1353,11 +1353,9 @@ class OfflineImageReconstructor {
         if (sd == null) {
           break;
         }
-        Long dir;
-        while ((dir = sd.removeChildLong(SNAPSHOT_SECTION_DIR)) != null) {
-          // Add all snapshottable directories, one by one
-          bld.addSnapshottableDir(dir);
-        }
+        Long dir = sd.removeChildLong(SNAPSHOT_SECTION_DIR);
+        sd.verifyNoRemainingKeys("<dir>");
+        bld.addSnapshottableDir(dir);
       }
       header.verifyNoRemainingKeys("SnapshotSection");
       bld.build().writeDelimitedTo(out);

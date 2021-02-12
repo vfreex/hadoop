@@ -31,23 +31,14 @@ export default AbstractRoute.extend(AppAttemptMixin, {
       attempts: this.fetchAttemptListFromRMorATS(app_id, this.store).catch(function() {
         return [];
       }),
-      app: this.fetchAppInfoFromRMorATS(app_id, this.store),
-      timelineHealth: this.store.queryRecord('timeline-health', {}).catch(function() {
-        return null;
-      })
+      app: this.fetchAppInfoFromRMorATS(app_id, this.store)
     });
   },
 
   activate() {
     const controller = this.controllerFor("yarn-app.logs");
-    const { attempt, containerid } = this.paramsFor('yarn-app.logs');
     controller.resetAfterRefresh();
     controller.initializeSelect();
-    if (attempt) {
-      controller.send("showContainersForAttemptId", attempt, containerid);
-    } else {
-      controller.set("selectedAttemptId", "");
-    }
   },
 
   unloadAll() {

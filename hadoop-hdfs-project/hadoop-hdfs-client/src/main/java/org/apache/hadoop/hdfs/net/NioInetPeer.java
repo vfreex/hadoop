@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
-import java.net.SocketAddress;
 import java.nio.channels.ReadableByteChannel;
 
 import org.apache.hadoop.net.SocketInputStream;
@@ -97,8 +96,7 @@ public class NioInetPeer implements Peer {
 
   @Override
   public String getRemoteAddressString() {
-    SocketAddress address = socket.getRemoteSocketAddress();
-    return address == null ? null : address.toString();
+    return socket.getRemoteSocketAddress().toString();
   }
 
   @Override

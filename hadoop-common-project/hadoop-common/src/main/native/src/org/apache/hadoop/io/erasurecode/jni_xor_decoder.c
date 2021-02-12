@@ -66,8 +66,6 @@ Java_org_apache_hadoop_io_erasurecode_rawcoder_NativeXORRawDecoder_decodeImpl(
       numDataUnits + numParityUnits);
   getOutputs(env, outputs, outputOffsets, xorDecoder->outputs, numParityUnits);
 
-  memset(xorDecoder->outputs[0], 0, chunkSize);
-
   for (i = 0; i < numDataUnits + numParityUnits; i++) {
     if (xorDecoder->inputs[i] == NULL) {
       continue;

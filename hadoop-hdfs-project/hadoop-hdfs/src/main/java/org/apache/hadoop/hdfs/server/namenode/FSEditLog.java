@@ -155,9 +155,7 @@ public class FSEditLog implements LogsPurgeable {
   
   //initialize
   private JournalSet journalSet = null;
-
-  @VisibleForTesting
-  EditLogOutputStream editLogStream = null;
+  private EditLogOutputStream editLogStream = null;
 
   // a monotonically increasing counter that represents transactionIds.
   // All of the threads which update/increment txid are synchronized,
@@ -564,8 +562,7 @@ public class FSEditLog implements LogsPurgeable {
   /**
    * @return the first transaction ID in the current log segment
    */
-  @VisibleForTesting
-  public synchronized long getCurSegmentTxId() {
+  synchronized long getCurSegmentTxId() {
     Preconditions.checkState(isSegmentOpen(),
         "Bad state: %s", state);
     return curSegmentTxId;
@@ -1801,8 +1798,7 @@ public class FSEditLog implements LogsPurgeable {
    * @return The constructed journal manager
    * @throws IllegalArgumentException if no class is configured for uri
    */
-  @VisibleForTesting
-  JournalManager createJournal(URI uri) {
+  private JournalManager createJournal(URI uri) {
     Class<? extends JournalManager> clazz
       = getJournalClass(conf, uri.getScheme());
 

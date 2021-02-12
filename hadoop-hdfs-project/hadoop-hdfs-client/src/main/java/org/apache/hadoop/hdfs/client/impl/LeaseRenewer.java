@@ -270,9 +270,8 @@ public class LeaseRenewer {
         half: LEASE_RENEWER_SLEEP_DEFAULT;
   }
 
-  @VisibleForTesting
   /** Is the daemon running? */
-  public synchronized boolean isRunning() {
+  synchronized boolean isRunning() {
     return daemon != null && daemon.isAlive();
   }
 

@@ -23,7 +23,6 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -35,7 +34,6 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerExitStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.Token;
-import org.apache.hadoop.yarn.api.records.impl.pb.ResourcePBImpl;
 import org.apache.hadoop.yarn.proto.YarnProtos.LocalResourceProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.ContainerManagerApplicationProto;
 import org.apache.hadoop.yarn.proto.YarnServerNodemanagerRecoveryProtos.DeletionServiceDeleteTaskProto;
@@ -47,9 +45,6 @@ import org.apache.hadoop.yarn.server.api.records.impl.pb.MasterKeyPBImpl;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.Container;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ResourceMappings;
 
-
-import org.apache.hadoop.yarn.server.utils.BuilderUtils;
-
 public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<ApplicationId, ContainerManagerApplicationProto> apps;
   private Map<ContainerId, RecoveredContainerState> containerStates;
@@ -57,8 +52,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   private Map<Integer, DeletionServiceDeleteTaskProto> deleteTasks;
   private RecoveredNMTokensState nmTokenState;
   private RecoveredContainerTokensState containerTokenState;
-  private Map<ApplicationAttemptId, MasterKey> applicationMasterKeys;
-  private Map<ContainerId, Long> activeTokens;
   private Map<ApplicationId, LogDeleterProto> logDeleterState;
   private RecoveredAMRMProxyState amrmProxyState;
 
@@ -71,9 +64,10 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
     apps = new HashMap<ApplicationId, ContainerManagerApplicationProto>();
     containerStates = new HashMap<ContainerId, RecoveredContainerState>();
     nmTokenState = new RecoveredNMTokensState();
-    applicationMasterKeys = new HashMap<ApplicationAttemptId, MasterKey>();
+    nmTokenState.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>();
     containerTokenState = new RecoveredContainerTokensState();
-    activeTokens = new HashMap<ContainerId, Long>();
+    containerTokenState.activeTokens = new HashMap<ContainerId, Long>();
     trackerStates = new HashMap<TrackerKey, TrackerState>();
     deleteTasks = new HashMap<Integer, DeletionServiceDeleteTaskProto>();
     logDeleterState = new HashMap<ApplicationId, LogDeleterProto>();
@@ -88,39 +82,13 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   protected void closeStorage() {
   }
 
-  // Recovery Iterator Implementation.
-  private class NMMemoryRecoveryIterator<T> implements RecoveryIterator<T> {
-
-    private Iterator<T> it;
-
-    NMMemoryRecoveryIterator(Iterator<T> it){
-      this.it = it;
-    }
-
-    @Override
-    public boolean hasNext() {
-      return it.hasNext();
-    }
-
-    @Override
-    public T next() throws IOException {
-      return it.next();
-    }
-
-    @Override
-    public void close() throws IOException {
-
-    }
-  }
 
   @Override
   public synchronized RecoveredApplicationsState loadApplicationsState()
       throws IOException {
     RecoveredApplicationsState state = new RecoveredApplicationsState();
-    List<ContainerManagerApplicationProto> containerList =
-        new ArrayList<ContainerManagerApplicationProto>(apps.values());
-    state.it = new NMMemoryRecoveryIterator<ContainerManagerApplicationProto>(
-        containerList.iterator());
+    state.applications = new ArrayList<ContainerManagerApplicationProto>(
+        apps.values());
     return state;
   }
 
@@ -139,13 +107,13 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public RecoveryIterator<RecoveredContainerState> getContainerStateIterator()
+  public synchronized List<RecoveredContainerState> loadContainersState()
       throws IOException {
     // return a copy so caller can't modify our state
     List<RecoveredContainerState> result =
         new ArrayList<RecoveredContainerState>(containerStates.size());
     for (RecoveredContainerState rcs : containerStates.values()) {
-      RecoveredContainerState rcsCopy = new RecoveredContainerState(rcs.getContainerId());
+      RecoveredContainerState rcsCopy = new RecoveredContainerState();
       rcsCopy.status = rcs.status;
       rcsCopy.exitCode = rcs.exitCode;
       rcsCopy.killed = rcs.killed;
@@ -159,25 +127,16 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       rcsCopy.setResourceMappings(rcs.getResourceMappings());
       result.add(rcsCopy);
     }
-    return new NMMemoryRecoveryIterator<RecoveredContainerState>(
-        result.iterator());
+    return result;
   }
 
   @Override
   public synchronized void storeContainer(ContainerId containerId,
-      int version, long startTime, StartContainerRequest startRequest) {
-    RecoveredContainerState rcs = new RecoveredContainerState(containerId);
+      int version, long startTime, StartContainerRequest startRequest)
+      throws IOException {
+    RecoveredContainerState rcs = new RecoveredContainerState();
     rcs.startRequest = startRequest;
     rcs.version = version;
-    try {
-      ContainerTokenIdentifier containerTokenIdentifier = BuilderUtils
-          .newContainerTokenIdentifier(startRequest.getContainerToken());
-      rcs.capability =
-          new ResourcePBImpl(containerTokenIdentifier.getProto().getResource());
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-
     rcs.setStartTime(startTime);
     containerStates.put(containerId, rcs);
   }
@@ -292,23 +251,13 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   }
 
   private LocalResourceTrackerState loadTrackerState(TrackerState ts) {
-    List<LocalizedResourceProto> completedResources =
-        new ArrayList<LocalizedResourceProto>(ts.localizedResources.values());
-    RecoveryIterator<LocalizedResourceProto> crIt =
-        new NMMemoryRecoveryIterator<LocalizedResourceProto>(
-            completedResources.iterator());
-
-    Map<LocalResourceProto, Path> inProgressMap =
-        new HashMap<LocalResourceProto, Path>();
+    LocalResourceTrackerState result = new LocalResourceTrackerState();
+    result.localizedResources.addAll(ts.localizedResources.values());
     for (Map.Entry<Path, LocalResourceProto> entry :
          ts.inProgressMap.entrySet()) {
-      inProgressMap.put(entry.getValue(), entry.getKey());
+      result.inProgressResources.put(entry.getValue(), entry.getKey());
     }
-    RecoveryIterator<Map.Entry<LocalResourceProto, Path>> srIt =
-        new NMMemoryRecoveryIterator<Map.Entry<LocalResourceProto, Path>>(
-            inProgressMap.entrySet().iterator());
-
-    return new LocalResourceTrackerState(crIt, srIt);
+    return result;
   }
 
   private TrackerState getTrackerState(TrackerKey key) {
@@ -323,8 +272,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   public synchronized RecoveredLocalizationState loadLocalizationState() {
     RecoveredLocalizationState result = new RecoveredLocalizationState();
-    Map<String, RecoveredUserResources> userResources =
-        new HashMap<String, RecoveredUserResources>();
     for (Map.Entry<TrackerKey, TrackerState> e : trackerStates.entrySet()) {
       TrackerKey tk = e.getKey();
       TrackerState ts = e.getValue();
@@ -335,10 +282,10 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       if (tk.user == null) {
         result.publicTrackerState = loadTrackerState(ts);
       } else {
-        RecoveredUserResources rur = userResources.get(tk.user);
+        RecoveredUserResources rur = result.userResources.get(tk.user);
         if (rur == null) {
           rur = new RecoveredUserResources();
-          userResources.put(tk.user, rur);
+          result.userResources.put(tk.user, rur);
         }
         if (tk.appId == null) {
           rur.privateTrackerState = loadTrackerState(ts);
@@ -347,8 +294,6 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
         }
       }
     }
-    result.it = new NMMemoryRecoveryIterator<Map.Entry<String, RecoveredUserResources>>(
-        userResources.entrySet().iterator());
     return result;
   }
 
@@ -384,10 +329,8 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
       throws IOException {
     RecoveredDeletionServiceState result =
         new RecoveredDeletionServiceState();
-    List<DeletionServiceDeleteTaskProto> deleteTaskProtos =
-        new ArrayList<DeletionServiceDeleteTaskProto>(deleteTasks.values());
-    result.it = new NMMemoryRecoveryIterator<DeletionServiceDeleteTaskProto>(
-        deleteTaskProtos.iterator());
+    result.tasks = new ArrayList<DeletionServiceDeleteTaskProto>(
+        deleteTasks.values());
     return result;
   }
 
@@ -410,10 +353,9 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
     RecoveredNMTokensState result = new RecoveredNMTokensState();
     result.currentMasterKey = nmTokenState.currentMasterKey;
     result.previousMasterKey = nmTokenState.previousMasterKey;
-    Map<ApplicationAttemptId, MasterKey> masterKeysMap =
-        new HashMap<ApplicationAttemptId, MasterKey>(applicationMasterKeys);
-    result.it = new NMMemoryRecoveryIterator<Map.Entry<ApplicationAttemptId, MasterKey>>(
-        masterKeysMap.entrySet().iterator());
+    result.applicationMasterKeys =
+        new HashMap<ApplicationAttemptId, MasterKey>(
+            nmTokenState.applicationMasterKeys);
     return result;
   }
 
@@ -435,14 +377,14 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   public synchronized void storeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt, MasterKey key) throws IOException {
     MasterKeyPBImpl keypb = (MasterKeyPBImpl) key;
-    applicationMasterKeys.put(attempt,
+    nmTokenState.applicationMasterKeys.put(attempt,
         new MasterKeyPBImpl(keypb.getProto()));
   }
 
   @Override
   public synchronized void removeNMTokenApplicationMasterKey(
       ApplicationAttemptId attempt) throws IOException {
-    applicationMasterKeys.remove(attempt);
+    nmTokenState.applicationMasterKeys.remove(attempt);
   }
 
 
@@ -454,10 +396,8 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
         new RecoveredContainerTokensState();
     result.currentMasterKey = containerTokenState.currentMasterKey;
     result.previousMasterKey = containerTokenState.previousMasterKey;
-    Map<ContainerId, Long> containersTokenMap =
-        new HashMap<ContainerId, Long>(activeTokens);
-    result.it = new NMMemoryRecoveryIterator<Map.Entry<ContainerId, Long>>(
-        containersTokenMap.entrySet().iterator());
+    result.activeTokens =
+        new HashMap<ContainerId, Long>(containerTokenState.activeTokens);
     return result;
   }
 
@@ -480,13 +420,13 @@ public class NMMemoryStateStoreService extends NMStateStoreService {
   @Override
   public synchronized void storeContainerToken(ContainerId containerId,
       Long expirationTime) throws IOException {
-    activeTokens.put(containerId, expirationTime);
+    containerTokenState.activeTokens.put(containerId, expirationTime);
   }
 
   @Override
   public synchronized void removeContainerToken(ContainerId containerId)
       throws IOException {
-    activeTokens.remove(containerId);
+    containerTokenState.activeTokens.remove(containerId);
   }
 
 

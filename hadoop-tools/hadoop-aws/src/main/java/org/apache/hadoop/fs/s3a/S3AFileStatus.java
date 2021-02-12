@@ -54,9 +54,7 @@ public class S3AFileStatus extends FileStatus {
   public S3AFileStatus(Tristate isemptydir,
       Path path,
       String owner) {
-    super(0, true, 1, 0, 0, 0,
-        null, null, null, null,
-        path, false, true, false);
+    super(0, true, 1, 0, 0, path);
     isEmptyDirectory = isemptydir;
     setOwner(owner);
     setGroup(owner);
@@ -72,9 +70,7 @@ public class S3AFileStatus extends FileStatus {
    */
   public S3AFileStatus(long length, long modification_time, Path path,
       long blockSize, String owner) {
-    super(length, false, 1, blockSize, modification_time, 0,
-        null, null, null, null,
-        path, false, true, false);
+    super(length, false, 1, blockSize, modification_time, path);
     isEmptyDirectory = Tristate.FALSE;
     setOwner(owner);
     setGroup(owner);

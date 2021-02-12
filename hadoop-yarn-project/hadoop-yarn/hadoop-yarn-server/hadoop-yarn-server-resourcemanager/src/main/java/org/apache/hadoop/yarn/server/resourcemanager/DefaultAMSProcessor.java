@@ -74,7 +74,6 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Allocation;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ContainerUpdates;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler
     .SchedulerNodeReport;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.SchedulerUtils;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.utils.BuilderUtils;
 import org.apache.hadoop.yarn.util.resource.ResourceUtils;
@@ -108,18 +107,12 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
 
   private RMContext rmContext;
   private ResourceProfilesManager resourceProfilesManager;
-  private boolean timelineServiceV2Enabled;
-  private Set<String> exclusiveEnforcedPartitions;
 
   @Override
   public void init(ApplicationMasterServiceContext amsContext,
       ApplicationMasterServiceProcessor nextProcessor) {
     this.rmContext = (RMContext)amsContext;
     this.resourceProfilesManager = rmContext.getResourceProfilesManager();
-    this.timelineServiceV2Enabled = YarnConfiguration.
-        timelineServiceV2Enabled(rmContext.getYarnConfiguration());
-    this.exclusiveEnforcedPartitions = YarnConfiguration
-        .getExclusiveEnforcedPartitions(rmContext.getYarnConfiguration());
   }
 
   @Override
@@ -228,14 +221,9 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
           && ResourceRequest.ANY.equals(req.getResourceName())) {
         req.setNodeLabelExpression(asc.getNodeLabelExpression());
       }
-      if (ResourceRequest.ANY.equals(req.getResourceName())) {
-        SchedulerUtils.enforcePartitionExclusivity(req,
-            exclusiveEnforcedPartitions, asc.getNodeLabelExpression());
-      }
     }
 
-    Resource maximumCapacity =
-        getScheduler().getMaximumResourceCapability(app.getQueue());
+    Resource maximumCapacity = getScheduler().getMaximumResourceCapability();
 
     // sanity check
     try {
@@ -329,7 +317,8 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     response.setNumClusterNodes(getScheduler().getNumClusterNodes());
 
     // add collector address for this application
-    if (timelineServiceV2Enabled) {
+    if (YarnConfiguration.timelineServiceV2Enabled(
+        getRmContext().getYarnConfiguration())) {
       CollectorInfo collectorInfo = app.getCollectorInfo();
       if (collectorInfo != null) {
         response.setCollectorInfo(collectorInfo);
@@ -393,7 +382,7 @@ final class DefaultAMSProcessor implements ApplicationMasterServiceProcessor {
     // Send the status update to the appAttempt.
     getRmContext().getDispatcher().getEventHandler().handle(
         new RMAppAttemptStatusupdateEvent(appAttemptId, request
-            .getProgress(), request.getTrackingUrl()));
+            .getProgress()));
   }
 
   @Override

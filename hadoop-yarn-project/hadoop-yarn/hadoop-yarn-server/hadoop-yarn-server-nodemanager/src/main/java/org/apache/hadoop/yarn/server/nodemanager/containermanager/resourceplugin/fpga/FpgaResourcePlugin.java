@@ -102,9 +102,4 @@ public class FpgaResourcePlugin implements ResourcePlugin {
   public NMResourceInfo getNMResourceInfo() throws YarnException {
     return null;
   }
-
-  @Override
-  public String toString() {
-    return FpgaResourcePlugin.class.getName();
-  }
 }

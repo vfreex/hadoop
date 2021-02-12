@@ -43,12 +43,8 @@ public class TestSlidingWindowRetryPolicy {
   public void testNeverRetry() {
     ContainerRetryContext retryContext =
         ContainerRetryContext.NEVER_RETRY_CONTEXT;
-    SlidingWindowRetryPolicy.RetryContext windowContext = new
-        SlidingWindowRetryPolicy.RetryContext(retryContext);
-    Assert.assertFalse("never retry", retryPolicy.shouldRetry(windowContext,
-        12));
-    Assert.assertEquals("remaining retries", 0,
-        windowContext.getRemainingRetries());
+    Assert.assertFalse("never retry", retryPolicy.shouldRetry(
+        new SlidingWindowRetryPolicy.RetryContext(retryContext), 12));
   }
 
   @Test
@@ -56,13 +52,8 @@ public class TestSlidingWindowRetryPolicy {
     ContainerRetryContext retryContext =  ContainerRetryContext.newInstance(
         ContainerRetryPolicy.RETRY_ON_ALL_ERRORS, null, -1,
         0, 10);
-    SlidingWindowRetryPolicy.RetryContext windowContext = new
-        SlidingWindowRetryPolicy.RetryContext(retryContext);
-    Assert.assertTrue("always retry", retryPolicy.shouldRetry(windowContext,
-        12));
-    Assert.assertEquals("remaining retries",
-        ContainerRetryContext.RETRY_FOREVER,
-        windowContext.getRemainingRetries());
+    Assert.assertTrue("always retry", retryPolicy.shouldRetry(
+        new SlidingWindowRetryPolicy.RetryContext(retryContext), 12));
   }
 
   @Test
@@ -74,28 +65,19 @@ public class TestSlidingWindowRetryPolicy {
     Assert.assertTrue("retry 1",
         retryPolicy.shouldRetry(windowRetryContext, 12));
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
 
     clock.setTime(20);
     Assert.assertTrue("retry 2",
         retryPolicy.shouldRetry(windowRetryContext, 12));
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
 
     clock.setTime(40);
     Assert.assertTrue("retry 3",
         retryPolicy.shouldRetry(windowRetryContext, 12));
     retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 1,
-        windowRetryContext.getRemainingRetries());
 
     clock.setTime(45);
     Assert.assertFalse("retry failed",
         retryPolicy.shouldRetry(windowRetryContext, 12));
-    retryPolicy.updateRetryContext(windowRetryContext);
-    Assert.assertEquals("remaining retries", 0,
-        windowRetryContext.getRemainingRetries());
   }
 }

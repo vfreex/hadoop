@@ -25,7 +25,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import javax.management.NotCompliantMBeanException;
-import javax.management.ObjectName;
 import javax.management.StandardMBean;
 
 import org.apache.commons.logging.Log;
@@ -43,7 +42,6 @@ public class RMNMInfo implements RMNMInfoBeans {
   private static final Log LOG = LogFactory.getLog(RMNMInfo.class);
   private RMContext rmContext;
   private ResourceScheduler scheduler;
-  private ObjectName mbeanObjectName;
 
   /**
    * Constructor for RMNMInfo registers the bean with JMX.
@@ -57,17 +55,14 @@ public class RMNMInfo implements RMNMInfoBeans {
 
     StandardMBean bean;
     try {
-      bean = new StandardMBean(this, RMNMInfoBeans.class);
-      mbeanObjectName = MBeans.register("ResourceManager", "RMNMInfo", bean);
+        bean = new StandardMBean(this,RMNMInfoBeans.class);
+        MBeans.register("ResourceManager", "RMNMInfo", bean);
     } catch (NotCompliantMBeanException e) {
-      LOG.warn("Error registering RMNMInfo MBean", e);
+        LOG.warn("Error registering RMNMInfo MBean", e);
     }
     LOG.info("Registered RMNMInfo MBean");
   }
 
-  public void unregister() {
-    MBeans.unregister(mbeanObjectName);
-  }
 
   static class InfoMap extends LinkedHashMap<String, Object> {
     private static final long serialVersionUID = 1L;

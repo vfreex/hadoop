@@ -136,8 +136,7 @@ public class PartitionQueueCapacitiesInfo {
   }
 
   public ResourceInfo getConfiguredMaxResource() {
-    if (configuredMaxResource == null
-        || configuredMaxResource.getResource().equals(Resources.none())) {
+    if (configuredMaxResource.getResource().equals(Resources.none())) {
       return null;
     }
     return configuredMaxResource;

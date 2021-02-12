@@ -282,11 +282,9 @@ public class JavaSandboxLinuxContainerRuntime
    * Determine if JVMSandboxLinuxContainerRuntime should be used.  This is
    * decided based on the value of
    * {@value YarnConfiguration#YARN_CONTAINER_SANDBOX}
-   * @param env the environment variable settings for the operation
    * @return true if Sandbox is requested, false otherwise
    */
-  @Override
-  public boolean isRuntimeRequested(Map<String, String> env) {
+  boolean isSandboxContainerRequested() {
     return sandboxMode != SandboxMode.disabled;
   }
 

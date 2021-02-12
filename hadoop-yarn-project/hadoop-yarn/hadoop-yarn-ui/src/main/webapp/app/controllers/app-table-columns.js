@@ -20,7 +20,6 @@
 import Ember from 'ember';
 import ColumnDef from 'em-table/utils/column-definition';
 import TableDef from 'em-table/utils/table-definition';
-import Converter from 'yarn-ui/utils/converter';
 
 export default Ember.Controller.extend({
   tableDefinition: TableDef.create({
@@ -84,9 +83,6 @@ export default Ember.Controller.extend({
           headerTitle: 'Start Time',
           contentPath: 'startTime',
           facetType: null,
-          getCellContent: function(row) {
-            return row.get('formattedStartTime');
-          }
       }, {
           id: 'elTime',
           headerTitle: 'Elapsed Time',
@@ -100,10 +96,7 @@ export default Ember.Controller.extend({
           headerTitle: 'Finished Time',
           contentPath: 'validatedFinishedTs',
           facetType: null,
-          observePath: true,
-          getCellContent: function(row) {
-            return row.get('formattedFinishedTime');
-          }
+          observePath: true
       }, {
           id: 'priority',
           headerTitle: 'Priority',
@@ -176,18 +169,12 @@ export default Ember.Controller.extend({
       headerTitle: 'Started Time',
       contentPath: 'startTime',
       facetType: null,
-      getCellContent: function(row) {
-        return row.get('formattedStartTime');
-      }
     }, {
       id: 'finishTime',
       headerTitle: 'Finished Time',
       contentPath: 'validatedFinishedTs',
       facetType: null,
-      observePath: true,
-      getCellContent: function(row) {
-        return row.get('formattedFinishedTime');
-      }
+      observePath: true
     });
     return ColumnDef.make(colums);
   }.property(),

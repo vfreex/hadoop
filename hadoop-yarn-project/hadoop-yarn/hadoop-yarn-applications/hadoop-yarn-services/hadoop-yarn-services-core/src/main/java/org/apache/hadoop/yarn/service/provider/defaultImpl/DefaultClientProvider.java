@@ -17,16 +17,13 @@
  */
 package org.apache.hadoop.yarn.service.provider.defaultImpl;
 
-import java.io.IOException;
-import java.nio.file.Paths;
-
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 import org.apache.hadoop.yarn.service.api.records.Artifact;
 import org.apache.hadoop.yarn.service.api.records.ConfigFile;
-import org.apache.hadoop.yarn.service.exceptions.RestApiErrorMessages;
-import org.apache.hadoop.yarn.service.provider.AbstractClientProvider;
 
-import com.google.common.annotations.VisibleForTesting;
+import java.io.IOException;
+import java.nio.file.Paths;
 
 public class DefaultClientProvider extends AbstractClientProvider {
 
@@ -34,19 +31,16 @@ public class DefaultClientProvider extends AbstractClientProvider {
   }
 
   @Override
-  public void validateArtifact(Artifact artifact, String compName,
-      FileSystem fileSystem) {
+  public void validateArtifact(Artifact artifact, FileSystem fileSystem) {
   }
 
   @Override
-  @VisibleForTesting
-  public void validateConfigFile(ConfigFile configFile, String compName,
-      FileSystem fileSystem) throws IOException {
+  protected void validateConfigFile(ConfigFile configFile, FileSystem
+      fileSystem) throws IOException {
     // validate dest_file is not absolute
     if (Paths.get(configFile.getDestFile()).isAbsolute()) {
-      throw new IllegalArgumentException(String.format(
-          RestApiErrorMessages.ERROR_CONFIGFILE_DEST_FILE_FOR_COMP_NOT_ABSOLUTE,
-          compName, "no", configFile.getDestFile()));
+      throw new IllegalArgumentException(
+          "Dest_file must not be absolute path: " + configFile.getDestFile());
     }
   }
 }

@@ -40,8 +40,7 @@ export default DS.JSONAPISerializer.extend({
           hosts: payload.host,
           state: payload.appAttemptState,
           logsLink: payload.logsLink,
-          appAttemptId: payload.appAttemptId,
-          diagnosticsInfo: payload.diagnosticsInfo
+          appAttemptId: payload.appAttemptId
         }
       };
 

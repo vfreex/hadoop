@@ -159,8 +159,4 @@ public class ContainerInfo {
   public Map<String, Long> getAllocatedResources() {
     return Collections.unmodifiableMap(allocatedResources);
   }
-
-  public boolean hasCustomResources() {
-    return allocatedResources.size() > 2;
-  }
 }

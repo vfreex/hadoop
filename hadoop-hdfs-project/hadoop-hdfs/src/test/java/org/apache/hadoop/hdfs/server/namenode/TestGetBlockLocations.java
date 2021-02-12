@@ -22,7 +22,6 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.namenode.FSDirectory.DirOp;
-import org.apache.hadoop.hdfs.server.namenode.NameNode.OperationCategory;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -65,28 +64,19 @@ public class TestGetBlockLocations {
     FSNamesystem fsn = spy(setupFileSystem());
     final FSDirectory fsd = fsn.getFSDirectory();
     FSEditLog editlog = fsn.getEditLog();
-    final boolean[] deleted = new boolean[]{false};
 
     doAnswer(new Answer<Void>() {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        if(!deleted[0]) {
-          fsn.writeLock();
-          try {
-            INodesInPath iip = fsd.getINodesInPath(FILE_PATH, DirOp.READ);
-            FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
-                                 new ArrayList<INode>(), new ArrayList<Long>(),
-                                 now());
-          } finally {
-            fsn.writeUnlock();
-          }
-          deleted[0] = true;
-        }
+        INodesInPath iip = fsd.getINodesInPath(FILE_PATH, DirOp.READ);
+        FSDirDeleteOp.delete(fsd, iip, new INode.BlocksMapUpdateInfo(),
+                             new ArrayList<INode>(), new ArrayList<Long>(),
+                             now());
         invocation.callRealMethod();
         return null;
       }
-    }).when(fsn).checkOperation(OperationCategory.WRITE);
+    }).when(fsn).writeLock();
     fsn.getBlockLocations("dummy", RESERVED_PATH, 0, 1024);
 
     verify(editlog, never()).logTimes(anyString(), anyLong(), anyLong());
@@ -99,27 +89,22 @@ public class TestGetBlockLocations {
     final FSDirectory fsd = fsn.getFSDirectory();
     FSEditLog editlog = fsn.getEditLog();
     final String DST_PATH = "/bar";
-    final boolean[] renamed = new boolean[] {false};
+    final boolean[] renamed = new boolean[1];
 
     doAnswer(new Answer<Void>() {
 
       @Override
       public Void answer(InvocationOnMock invocation) throws Throwable {
-        if (!renamed[0]) {
-          fsn.writeLock();
-          try {
-            FSDirRenameOp.renameTo(fsd, fsd.getPermissionChecker(), FILE_PATH,
-                                   DST_PATH, new INode.BlocksMapUpdateInfo(),
-                                   false);
-            renamed[0] = true;
-          } finally {
-            fsn.writeUnlock();
-          }
-        }
         invocation.callRealMethod();
+        if (!renamed[0]) {
+          FSDirRenameOp.renameTo(fsd, fsd.getPermissionChecker(), FILE_PATH,
+                                 DST_PATH, new INode.BlocksMapUpdateInfo(),
+                                 false);
+          renamed[0] = true;
+        }
         return null;
       }
-    }).when(fsn).checkOperation(OperationCategory.WRITE);
+    }).when(fsn).writeLock();
     fsn.getBlockLocations("dummy", RESERVED_PATH, 0, 1024);
 
     verify(editlog).logTimes(eq(DST_PATH), anyLong(), anyLong());
@@ -134,6 +119,8 @@ public class TestGetBlockLocations {
     when(image.getEditLog()).thenReturn(editlog);
     final FSNamesystem fsn = new FSNamesystem(conf, image, true);
 
+    final FSDirectory fsd = fsn.getFSDirectory();
+    INodesInPath iip = fsd.getINodesInPath("/", DirOp.READ);
     PermissionStatus perm = new PermissionStatus(
         "hdfs", "supergroup",
         FsPermission.createImmutable((short) 0x1ff));
@@ -141,15 +128,7 @@ public class TestGetBlockLocations {
         MOCK_INODE_ID, FILE_NAME.getBytes(StandardCharsets.UTF_8),
         perm, 1, 1, new BlockInfo[] {}, (short) 1,
         DFS_BLOCK_SIZE_DEFAULT);
-
-    fsn.writeLock();
-    try {
-      final FSDirectory fsd = fsn.getFSDirectory();
-      INodesInPath iip = fsd.getINodesInPath("/", DirOp.READ);
-      fsd.addINode(iip, file, null);
-    } finally {
-      fsn.writeUnlock();
-    }
+    fsn.getFSDirectory().addINode(iip, file, null);
     return fsn;
   }
 

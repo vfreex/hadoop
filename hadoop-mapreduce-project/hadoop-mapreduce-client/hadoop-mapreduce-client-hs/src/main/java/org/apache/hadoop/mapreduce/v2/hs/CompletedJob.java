@@ -380,20 +380,17 @@ public class CompletedJob implements org.apache.hadoop.mapreduce.v2.app.job.Job 
         parser = createJobHistoryParser(historyFileAbsolute);
         this.jobInfo = parser.parse();
       } catch (IOException e) {
-        String errorMsg = "Could not load history file " + historyFileAbsolute;
-        LOG.warn(errorMsg, e);
-        throw new YarnRuntimeException(errorMsg, e);
+        throw new YarnRuntimeException("Could not load history file "
+            + historyFileAbsolute, e);
       }
       IOException parseException = parser.getParseException(); 
       if (parseException != null) {
-        String errorMsg = "Could not parse history file " + historyFileAbsolute;
-        LOG.warn(errorMsg, parseException);
-        throw new YarnRuntimeException(errorMsg, parseException);
+        throw new YarnRuntimeException(
+            "Could not parse history file " + historyFileAbsolute, 
+            parseException);
       }
     } else {
-      String errorMsg = "History file not found";
-      LOG.warn(errorMsg);
-      throw new IOException(errorMsg);
+      throw new IOException("History file not found");
     }
     if (loadTasks) {
       loadAllTasks();

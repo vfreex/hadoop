@@ -124,7 +124,6 @@ public class ResourceTrackerService extends AbstractService implements
   private DynamicResourceConfiguration drConf;
 
   private final AtomicLong timelineCollectorVersion = new AtomicLong(0);
-  private boolean timelineServiceV2Enabled;
 
   public ResourceTrackerService(RMContext rmContext,
       NodesListManager nodesListManager,
@@ -171,8 +170,6 @@ public class ResourceTrackerService extends AbstractService implements
     minimumNodeManagerVersion = conf.get(
         YarnConfiguration.RM_NODEMANAGER_MINIMUM_VERSION,
         YarnConfiguration.DEFAULT_RM_NODEMANAGER_MINIMUM_VERSION);
-    timelineServiceV2Enabled =  YarnConfiguration.
-        timelineServiceV2Enabled(conf);
 
     if (YarnConfiguration.areNodeLabelsEnabled(conf)) {
       isDistributedNodeLabelsConf =
@@ -260,7 +257,6 @@ public class ResourceTrackerService extends AbstractService implements
 
   @Override
   protected void serviceStop() throws Exception {
-    decommissioningWatcher.stop();
     if (this.server != null) {
       this.server.stop();
     }
@@ -582,7 +578,9 @@ public class ResourceTrackerService extends AbstractService implements
           NodeAction.SHUTDOWN, message);
     }
 
-    if (timelineServiceV2Enabled) {
+    boolean timelineV2Enabled =
+        YarnConfiguration.timelineServiceV2Enabled(getConfig());
+    if (timelineV2Enabled) {
       // Check & update collectors info from request.
       updateAppCollectorsMap(request);
     }
@@ -602,7 +600,7 @@ public class ResourceTrackerService extends AbstractService implements
       nodeHeartBeatResponse.setSystemCredentialsForApps(systemCredentials);
     }
 
-    if (timelineServiceV2Enabled) {
+    if (timelineV2Enabled) {
       // Return collectors' map that NM needs to know
       setAppCollectorsMapToResponse(rmNode.getRunningApps(),
           nodeHeartBeatResponse);
@@ -731,17 +729,10 @@ public class ResourceTrackerService extends AbstractService implements
    */
   private boolean isNodeInDecommissioning(NodeId nodeId) {
     RMNode rmNode = this.rmContext.getRMNodes().get(nodeId);
-
-    if (rmNode != null) {
-      NodeState state = rmNode.getState();
-
-      if (state == NodeState.DECOMMISSIONING ||
-          (state == NodeState.RUNNING &&
-          this.nodesListManager.isGracefullyDecommissionableNode(rmNode))) {
-        return true;
-      }
+    if (rmNode != null &&
+        rmNode.getState().equals(NodeState.DECOMMISSIONING)) {
+      return true;
     }
-
     return false;
   }
 

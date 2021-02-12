@@ -187,8 +187,8 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
         FSDataInputStream fsin = fileContext.open(thisNodeFile.getPath());
         int bufferSize = 65536;
         for (IndexedFileLogMeta candidate : candidates) {
-          if (candidate.getLastModifiedTime() < startTime
-              || candidate.getLastModifiedTime() > endTime) {
+          if (candidate.getLastModificatedTime() < startTime
+              || candidate.getLastModificatedTime() > endTime) {
             continue;
           }
           byte[] cbuf = new byte[bufferSize];
@@ -205,7 +205,7 @@ public class IndexedFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
             html.pre().__("\n\n").__();
             html.p().__("Log Type: " + candidate.getFileName()).__();
             html.p().__("Log Upload Time: " + Times.format(
-                candidate.getLastModifiedTime())).__();
+                candidate.getLastModificatedTime())).__();
             html.p().__("Log Length: " + Long.toString(
                 logLength)).__();
             long startIndex = start < 0

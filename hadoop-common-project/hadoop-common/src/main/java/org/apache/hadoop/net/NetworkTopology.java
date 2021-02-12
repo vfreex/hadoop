@@ -146,8 +146,10 @@ public class NetworkTopology {
         if (rack == null) {
           incrementRacks();
         }
-        if (depthOfAllLeaves == -1) {
-          depthOfAllLeaves = node.getLevel();
+        if (!(node instanceof InnerNode)) {
+          if (depthOfAllLeaves == -1) {
+            depthOfAllLeaves = node.getLevel();
+          }
         }
       }
       LOG.debug("NetworkTopology became:\n{}", this);
@@ -293,12 +295,22 @@ public class NetworkTopology {
   
   /** @return the total number of racks */
   public int getNumOfRacks() {
-    return numOfRacks;
+    netlock.readLock().lock();
+    try {
+      return numOfRacks;
+    } finally {
+      netlock.readLock().unlock();
+    }
   }
 
   /** @return the total number of leaf nodes */
   public int getNumOfLeaves() {
-    return clusterMap.getNumOfLeaves();
+    netlock.readLock().lock();
+    try {
+      return clusterMap.getNumOfLeaves();
+    } finally {
+      netlock.readLock().unlock();
+    }
   }
 
   /** Return the distance between two nodes
@@ -520,13 +532,8 @@ public class NetworkTopology {
     if (excludedScope == null) {
       availableNodes = countNumOfAvailableNodes(scope, excludedNodes);
     } else {
-      netlock.readLock().lock();
-      try {
-        availableNodes = countNumOfAvailableNodes(scope, excludedNodes) -
-            countNumOfAvailableNodes(excludedScope, excludedNodes);
-      } finally {
-        netlock.readLock().unlock();
-      }
+      availableNodes =
+          countNumOfAvailableNodes("~" + excludedScope, excludedNodes);
     }
     LOG.debug("Choosing random from {} available nodes on node {},"
         + " scope={}, excludedScope={}, excludeNodes={}. numOfDatanodes={}.",
@@ -557,11 +564,10 @@ public class NetworkTopology {
   private Node chooseRandom(final InnerNode parentNode,
       final Node excludedScopeNode, final Collection<Node> excludedNodes,
       final int totalInScopeNodes, final int availableNodes) {
-    if (totalInScopeNodes < availableNodes) {
-      LOG.warn("Total Nodes in scope : {} are less than Available Nodes : {}",
-          totalInScopeNodes, availableNodes);
-      return null;
-    }
+    Preconditions.checkArgument(
+        totalInScopeNodes >= availableNodes && availableNodes > 0, String
+            .format("%d should >= %d, and both should be positive.",
+                totalInScopeNodes, availableNodes));
     if (excludedNodes == null || excludedNodes.isEmpty()) {
       // if there are no excludedNodes, randomly choose a node
       final int index = r.nextInt(totalInScopeNodes);
@@ -747,7 +753,6 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  @VisibleForTesting
   protected int getWeight(Node reader, Node node) {
     // 0 is local, 2 is same rack, and each level on each node increases the
     //weight by 1
@@ -790,8 +795,7 @@ public class NetworkTopology {
    * @param node Replica of data
    * @return weight
    */
-  @VisibleForTesting
-  protected static int getWeightUsingNetworkLocation(Node reader, Node node) {
+  private static int getWeightUsingNetworkLocation(Node reader, Node node) {
     //Start off by initializing to Integer.MAX_VALUE
     int weight = Integer.MAX_VALUE;
     if(reader != null && node != null) {
@@ -821,10 +825,8 @@ public class NetworkTopology {
           }
           currentLevel++;
         }
-        // +2 to correct the weight between reader and node rather than
-        // between parent of reader and parent of node.
         weight = (readerPathToken.length - currentLevel) +
-            (nodePathToken.length - currentLevel) + 2;
+            (nodePathToken.length - currentLevel);
       }
     }
     return weight;

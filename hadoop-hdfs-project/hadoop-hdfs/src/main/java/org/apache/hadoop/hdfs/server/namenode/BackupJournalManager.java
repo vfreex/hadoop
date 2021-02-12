@@ -59,7 +59,7 @@ class BackupJournalManager implements JournalManager {
   public EditLogOutputStream startLogSegment(long txId, int layoutVersion)
       throws IOException {
     EditLogBackupOutputStream stm = new EditLogBackupOutputStream(bnReg,
-        journalInfo, layoutVersion);
+        journalInfo);
     stm.startLogSegment(txId);
     return stm;
   }

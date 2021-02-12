@@ -277,27 +277,8 @@ public class SchedulingRequestPBImpl extends SchedulingRequest {
     if (other == null) {
       return false;
     }
-    if (other instanceof SchedulingRequest) {
-      if (this == other) {
-        return true;
-      }
-      SchedulingRequest that = (SchedulingRequest) other;
-      if (getAllocationRequestId() != that.getAllocationRequestId()) {
-        return false;
-      }
-      if (!getAllocationTags().equals(that.getAllocationTags())) {
-        return false;
-      }
-      if (!getPriority().equals(that.getPriority())) {
-        return false;
-      }
-      if(!getExecutionType().equals(that.getExecutionType())) {
-        return false;
-      }
-      if(!getResourceSizing().equals(that.getResourceSizing())) {
-        return false;
-      }
-      return getPlacementConstraint().equals(that.getPlacementConstraint());
+    if (other.getClass().isAssignableFrom(this.getClass())) {
+      return this.getProto().equals(this.getClass().cast(other).getProto());
     }
     return false;
   }

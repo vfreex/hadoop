@@ -33,12 +33,10 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptContainerAssigned
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocator;
 import org.apache.hadoop.mapreduce.v2.app.rm.ContainerAllocatorEvent;
 import org.apache.hadoop.mapreduce.v2.app.rm.RMContainerAllocator;
-import org.apache.hadoop.mapreduce.v2.app.rm.RMHeartbeatHandler;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.AMPreemptionPolicy;
 import org.apache.hadoop.mapreduce.v2.app.rm.preemption.NoopAMPreemptionPolicy;
 import org.apache.hadoop.service.AbstractService;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.Time;
 import org.apache.hadoop.yarn.api.ApplicationMasterProtocol;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
@@ -49,7 +47,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRespo
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
-import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
@@ -118,7 +115,7 @@ public class MRAppBenchmark {
     }
     
     class ThrottledContainerAllocator extends AbstractService 
-        implements ContainerAllocator, RMHeartbeatHandler {
+        implements ContainerAllocator {
       private int containerCount;
       private Thread thread;
       private BlockingQueue<ContainerAllocatorEvent> eventQueue =
@@ -184,19 +181,10 @@ public class MRAppBenchmark {
         }
         super.serviceStop();
       }
-
-      @Override
-      public long getLastHeartbeatTime() {
-        return Time.now();
-      }
-
-      @Override
-      public void runOnNextHeartbeat(Runnable callback) {
-      }
     }
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void benchmark1() throws Exception {
     int maps = 100; // Adjust for benchmarking. Start with thousands.
     int reduces = 0;
@@ -223,7 +211,6 @@ public class MRAppBenchmark {
                     Records.newRecord(RegisterApplicationMasterResponse.class);
                 response.setMaximumResourceCapability(Resource.newInstance(
                   10240, 1));
-                response.setQueue("queue1");
                 return response;
               }
 
@@ -265,7 +252,6 @@ public class MRAppBenchmark {
                 response.setAllocatedContainers(containers);
                 response.setResponseId(request.getResponseId() + 1);
                 response.setNumClusterNodes(350);
-                response.setApplicationPriority(Priority.newInstance(100));
                 return response;
               }
             };
@@ -275,7 +261,7 @@ public class MRAppBenchmark {
     });
   }
 
-  @Test(timeout = 60000)
+  @Test
   public void benchmark2() throws Exception {
     int maps = 100; // Adjust for benchmarking, start with a couple of thousands
     int reduces = 50;

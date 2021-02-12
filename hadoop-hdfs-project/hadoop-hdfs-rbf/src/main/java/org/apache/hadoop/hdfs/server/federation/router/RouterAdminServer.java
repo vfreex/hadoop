@@ -28,7 +28,6 @@ import com.google.common.base.Preconditions;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.proto.RouterProtocolProtos.RouterAdminProtocolService;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolPB;
 import org.apache.hadoop.hdfs.protocolPB.RouterAdminProtocolServerSideTranslatorPB;
@@ -254,11 +253,8 @@ public class RouterAdminServer extends AbstractService
 
     if (nsQuota != HdfsConstants.QUOTA_DONT_SET
         || ssQuota != HdfsConstants.QUOTA_DONT_SET) {
-      HdfsFileStatus ret = this.router.getRpcServer().getFileInfo(path);
-      if (ret != null) {
-        this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
-            ssQuota, null);
-      }
+      this.router.getRpcServer().getQuotaModule().setQuota(path, nsQuota,
+          ssQuota, null);
     }
   }
 
@@ -283,13 +279,6 @@ public class RouterAdminServer extends AbstractService
       this.router.updateRouterState(RouterServiceState.SAFEMODE);
       safeModeService.setManualSafeMode(true);
       success = verifySafeMode(true);
-      if (success) {
-        LOG.info("STATE* Safe mode is ON.\n" + "It was turned on manually. "
-            + "Use \"hdfs dfsrouteradmin -safemode leave\" to turn"
-            + " safe mode off.");
-      } else {
-        LOG.error("Unable to enter safemode.");
-      }
     }
     return EnterSafeModeResponse.newInstance(success);
   }
@@ -303,11 +292,6 @@ public class RouterAdminServer extends AbstractService
       this.router.updateRouterState(RouterServiceState.RUNNING);
       safeModeService.setManualSafeMode(false);
       success = verifySafeMode(false);
-      if (success) {
-        LOG.info("STATE* Safe mode is OFF.\n" + "It was turned off manually.");
-      } else {
-        LOG.error("Unable to leave safemode.");
-      }
     }
     return LeaveSafeModeResponse.newInstance(success);
   }
@@ -319,7 +303,6 @@ public class RouterAdminServer extends AbstractService
     RouterSafemodeService safeModeService = this.router.getSafemodeService();
     if (safeModeService != null) {
       isInSafeMode = safeModeService.isInSafeMode();
-      LOG.info("Safemode status retrieved successfully.");
     }
     return GetSafeModeResponse.newInstance(isInSafeMode);
   }
@@ -353,11 +336,6 @@ public class RouterAdminServer extends AbstractService
     boolean success = false;
     if (namespaceExists(nsId)) {
       success = getDisabledNameserviceStore().disableNameservice(nsId);
-      if (success) {
-        LOG.info("Nameservice {} disabled successfully.", nsId);
-      } else {
-        LOG.error("Unable to disable Nameservice {}", nsId);
-      }
     } else {
       LOG.error("Cannot disable {}, it does not exists", nsId);
     }
@@ -391,11 +369,6 @@ public class RouterAdminServer extends AbstractService
     boolean success = false;
     if (disabled.contains(nsId)) {
       success = store.enableNameservice(nsId);
-      if (success) {
-        LOG.info("Nameservice {} enabled successfully.", nsId);
-      } else {
-        LOG.error("Unable to enable Nameservice {}", nsId);
-      }
     } else {
       LOG.error("Cannot enable {}, it was not disabled", nsId);
     }

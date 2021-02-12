@@ -242,18 +242,14 @@ public class ContainerMetrics implements MetricsSource {
     }
   }
 
-  public synchronized void finished(boolean unregisterWithoutDelay) {
+  public synchronized void finished() {
     if (!finished) {
       this.finished = true;
       if (timer != null) {
         timer.cancel();
         timer = null;
       }
-      if (!unregisterWithoutDelay) {
-        scheduleTimerTaskForUnregistration();
-      } else {
-        ContainerMetrics.unregisterContainerMetrics(ContainerMetrics.this);
-      }
+      scheduleTimerTaskForUnregistration();
       this.pMemMBQuantiles.stop();
       this.cpuCoreUsagePercentQuantiles.stop();
     }

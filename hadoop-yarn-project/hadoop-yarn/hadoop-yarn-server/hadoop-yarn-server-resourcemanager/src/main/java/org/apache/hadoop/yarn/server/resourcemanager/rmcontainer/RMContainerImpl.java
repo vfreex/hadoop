@@ -25,7 +25,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock.WriteLock;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
@@ -155,8 +154,7 @@ public class RMContainerImpl implements RMContainer {
     // Transitions from KILLED state
     .addTransition(RMContainerState.KILLED, RMContainerState.KILLED,
         EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
-            RMContainerEventType.KILL, RMContainerEventType.ACQUIRED,
-            RMContainerEventType.FINISHED))
+            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
 
     // create the topology tables
     .installTopology();
@@ -246,13 +244,23 @@ public class RMContainerImpl implements RMContainer {
     this.readLock = lock.readLock();
     this.writeLock = lock.writeLock();
 
-    saveNonAMContainerMetaInfo =
-        shouldPublishNonAMContainerEventstoATS(rmContext);
+    saveNonAMContainerMetaInfo = rmContext.getYarnConfiguration().getBoolean(
+       YarnConfiguration.APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO,
+       YarnConfiguration
+                 .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
 
     if (container.getId() != null) {
       rmContext.getRMApplicationHistoryWriter().containerStarted(this);
     }
 
+    // If saveNonAMContainerMetaInfo is true, store system metrics for all
+    // containers. If false, and if this container is marked as the AM, metrics
+    // will still be published for this container, but that calculation happens
+    // later.
+    if (saveNonAMContainerMetaInfo && null != container.getId()) {
+      rmContext.getSystemMetricsPublisher().containerCreated(
+          this, this.creationTime);
+    }
     if (this.container != null) {
       this.allocationTags = this.container.getAllocationTags();
     }
@@ -475,7 +483,8 @@ public class RMContainerImpl implements RMContainer {
          stateMachine.doTransition(event.getType(), event);
       } catch (InvalidStateTransitionException e) {
         LOG.error("Can't handle this event at current state", e);
-        onInvalidStateTransition(event.getType(), oldState);
+        LOG.error("Invalid event " + event.getType() + 
+            " on container " + this.getContainerId());
       }
       if (oldState != getState()) {
         LOG.info(event.getContainerId() + " Container Transitioned from "
@@ -581,12 +590,8 @@ public class RMContainerImpl implements RMContainer {
           container.getNodeId(), container.getContainerId(),
           container.getAllocationTags());
 
-      container.eventHandler.handle(
-          new RMAppAttemptEvent(container.appAttemptId,
-              RMAppAttemptEventType.CONTAINER_ALLOCATED));
-
-      publishNonAMContainerEventstoATS(container);
-
+      container.eventHandler.handle(new RMAppAttemptEvent(
+          container.appAttemptId, RMAppAttemptEventType.CONTAINER_ALLOCATED));
     }
   }
 
@@ -605,11 +610,9 @@ public class RMContainerImpl implements RMContainer {
       // Tell the app
       container.eventHandler.handle(new RMAppRunningOnNodeEvent(container
           .getApplicationAttemptId().getApplicationId(), container.nodeId));
-
-      publishNonAMContainerEventstoATS(container);
     }
   }
-
+  
   private static final class ContainerAcquiredWhileRunningTransition extends
       BaseTransition {
 
@@ -715,12 +718,17 @@ public class RMContainerImpl implements RMContainer {
         container);
 
       boolean saveNonAMContainerMetaInfo =
-          shouldPublishNonAMContainerEventstoATS(container.rmContext);
+          container.rmContext.getYarnConfiguration().getBoolean(
+              YarnConfiguration
+                .APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO,
+              YarnConfiguration
+                .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
 
       if (saveNonAMContainerMetaInfo || container.isAMContainer()) {
         container.rmContext.getSystemMetricsPublisher().containerFinished(
             container, container.finishTime);
       }
+
     }
 
     private static void updateAttemptMetrics(RMContainerImpl container) {
@@ -743,29 +751,6 @@ public class RMContainerImpl implements RMContainer {
           }
         }
       }
-    }
-  }
-
-  private static boolean shouldPublishNonAMContainerEventstoATS(
-      RMContext rmContext) {
-    return rmContext.getYarnConfiguration().getBoolean(
-        YarnConfiguration.APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO,
-        YarnConfiguration
-            .DEFAULT_APPLICATION_HISTORY_SAVE_NON_AM_CONTAINER_META_INFO);
-  }
-
-  private static void publishNonAMContainerEventstoATS(
-      RMContainerImpl rmContainer) {
-    boolean saveNonAMContainerMetaInfo = shouldPublishNonAMContainerEventstoATS(
-        rmContainer.rmContext);
-
-    // If saveNonAMContainerMetaInfo is true, store system metrics for all
-    // containers. If false, and if this container is marked as the AM, metrics
-    // will still be published for this container, but that calculation happens
-    // later.
-    if (saveNonAMContainerMetaInfo && null != rmContainer.container.getId()) {
-      rmContainer.rmContext.getSystemMetricsPublisher().containerCreated(
-          rmContainer, rmContainer.creationTime);
     }
   }
 
@@ -899,18 +884,13 @@ public class RMContainerImpl implements RMContainer {
     if (containerId != null) {
       rmContext.getRMApplicationHistoryWriter().containerStarted(this);
     }
-  }
-
-  /**
-   * catch the InvalidStateTransition.
-   * @param state
-   * @param rmContainerEventType
-   */
-  @VisibleForTesting
-  protected void onInvalidStateTransition(
-      RMContainerEventType rmContainerEventType,
-      RMContainerState state){
-    LOG.error("Invalid event " + rmContainerEventType +
-              " on container " + this.getContainerId());
+    // If saveNonAMContainerMetaInfo is true, store system metrics for all
+    // containers. If false, and if this container is marked as the AM, metrics
+    // will still be published for this container, but that calculation happens
+    // later.
+    if (saveNonAMContainerMetaInfo && null != container.getId()) {
+      rmContext.getSystemMetricsPublisher().containerCreated(
+          this, this.creationTime);
+    }
   }
 }

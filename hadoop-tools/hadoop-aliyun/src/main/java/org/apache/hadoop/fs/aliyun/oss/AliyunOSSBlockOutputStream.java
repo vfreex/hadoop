@@ -33,9 +33,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
@@ -52,7 +50,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
   private boolean closed;
   private String key;
   private File blockFile;
-  private Map<Integer, File> blockFiles = new HashMap<>();
+  private List<File> blockFiles = new ArrayList<>();
   private long blockSize;
   private int blockId = 0;
   private long blockWritten = 0L;
@@ -96,9 +94,8 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
 
     blockStream.flush();
     blockStream.close();
-    if (!blockFiles.values().contains(blockFile)) {
-      blockId++;
-      blockFiles.put(blockId, blockFile);
+    if (!blockFiles.contains(blockFile)) {
+      blockFiles.add(blockFile);
     }
 
     try {
@@ -110,7 +107,7 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
           ListenableFuture<PartETag> partETagFuture =
               executorService.submit(() -> {
                 PartETag partETag = store.uploadPart(blockFile, key, uploadId,
-                    blockId);
+                    blockId + 1);
                 return partETag;
               });
           partETagsFutures.add(partETagFuture);
@@ -120,17 +117,20 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
         if (null == partETags) {
           throw new IOException("Failed to multipart upload to oss, abort it.");
         }
-        store.completeMultipartUpload(key, uploadId,
-            new ArrayList<>(partETags));
+        store.completeMultipartUpload(key, uploadId, partETags);
       }
     } finally {
-      removeTemporaryFiles();
+      for (File tFile: blockFiles) {
+        if (tFile.exists() && !tFile.delete()) {
+          LOG.warn("Failed to delete temporary file {}", tFile);
+        }
+      }
       closed = true;
     }
   }
 
   @Override
-  public synchronized void write(int b) throws IOException {
+  public void write(int b) throws IOException {
     singleByte[0] = (byte)b;
     write(singleByte, 0, 1);
   }
@@ -141,60 +141,38 @@ public class AliyunOSSBlockOutputStream extends OutputStream {
     if (closed) {
       throw new IOException("Stream closed.");
     }
-    blockStream.write(b, off, len);
-    blockWritten += len;
-    if (blockWritten >= blockSize) {
-      uploadCurrentPart();
-      blockWritten = 0L;
-    }
-  }
-
-  private void removeTemporaryFiles() {
-    for (File file : blockFiles.values()) {
-      if (file != null && file.exists() && !file.delete()) {
-        LOG.warn("Failed to delete temporary file {}", file);
+    try {
+      blockStream.write(b, off, len);
+      blockWritten += len;
+      if (blockWritten >= blockSize) {
+        uploadCurrentPart();
+        blockWritten = 0L;
       }
-    }
-  }
-
-  private void removePartFiles() throws IOException {
-    for (ListenableFuture<PartETag> partETagFuture : partETagsFutures) {
-      if (!partETagFuture.isDone()) {
-        continue;
-      }
-
-      try {
-        File blockFile = blockFiles.get(partETagFuture.get().getPartNumber());
-        if (blockFile != null && blockFile.exists() && !blockFile.delete()) {
-          LOG.warn("Failed to delete temporary file {}", blockFile);
+    } finally {
+      for (File tFile: blockFiles) {
+        if (tFile.exists() && !tFile.delete()) {
+          LOG.warn("Failed to delete temporary file {}", tFile);
         }
-      } catch (InterruptedException | ExecutionException e) {
-        throw new IOException(e);
       }
     }
   }
 
   private void uploadCurrentPart() throws IOException {
+    blockFiles.add(blockFile);
     blockStream.flush();
     blockStream.close();
     if (blockId == 0) {
       uploadId = store.getUploadId(key);
     }
-
-    blockId++;
-    blockFiles.put(blockId, blockFile);
-
-    File currentFile = blockFile;
-    int currentBlockId = blockId;
     ListenableFuture<PartETag> partETagFuture =
         executorService.submit(() -> {
-          PartETag partETag = store.uploadPart(currentFile, key, uploadId,
-              currentBlockId);
+          PartETag partETag = store.uploadPart(blockFile, key, uploadId,
+              blockId + 1);
           return partETag;
         });
     partETagsFutures.add(partETagFuture);
-    removePartFiles();
     blockFile = newBlockFile();
+    blockId++;
     blockStream = new BufferedOutputStream(new FileOutputStream(blockFile));
   }
 

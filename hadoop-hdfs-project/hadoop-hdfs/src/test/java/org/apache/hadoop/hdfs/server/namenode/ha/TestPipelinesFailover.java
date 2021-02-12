@@ -28,8 +28,8 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -70,12 +70,12 @@ import com.google.common.base.Supplier;
  */
 public class TestPipelinesFailover {
   static {
-    GenericTestUtils.setLogLevel(LoggerFactory.getLogger(RetryInvocationHandler
-            .class), org.slf4j.event.Level.DEBUG);
+    GenericTestUtils.setLogLevel(LogFactory.getLog(RetryInvocationHandler
+            .class), Level.ALL);
     DFSTestUtil.setNameNodeLogLevel(Level.ALL);
   }
   
-  protected static final Logger LOG = LoggerFactory.getLogger(
+  protected static final Log LOG = LogFactory.getLog(
       TestPipelinesFailover.class);
   private static final Path TEST_PATH =
     new Path("/test-file");

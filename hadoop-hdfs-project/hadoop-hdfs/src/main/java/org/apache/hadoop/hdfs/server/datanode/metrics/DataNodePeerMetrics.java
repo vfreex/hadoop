@@ -19,9 +19,9 @@
 package org.apache.hadoop.hdfs.server.datanode.metrics;
 
 
+import com.google.common.annotations.VisibleForTesting;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.metrics2.MetricsJsonBuilder;
 import org.apache.hadoop.metrics2.lib.MutableRollingAverages;
 import org.slf4j.Logger;
@@ -29,9 +29,6 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
-
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT;
-import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY;
 
 /**
  * This class maintains DataNode peer metrics (e.g. numOps, AvgTime, etc.) for
@@ -61,13 +58,11 @@ public class DataNodePeerMetrics {
    * for outlier detection. If the number of samples is below this then
    * outlier detection is skipped.
    */
-  private final long minOutlierDetectionSamples;
+  @VisibleForTesting
+  static final long MIN_OUTLIER_DETECTION_SAMPLES = 1000;
 
-  public DataNodePeerMetrics(final String name, Configuration conf) {
+  public DataNodePeerMetrics(final String name) {
     this.name = name;
-    minOutlierDetectionSamples = conf.getLong(
-        DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_KEY,
-        DFS_DATANODE_PEER_METRICS_MIN_OUTLIER_DETECTION_SAMPLES_DEFAULT);
     this.slowNodeDetector = new OutlierDetector(MIN_OUTLIER_DETECTION_NODES,
         LOW_THRESHOLD_MS);
     sendPacketDownstreamRollingAverages = new MutableRollingAverages("Time");
@@ -77,19 +72,15 @@ public class DataNodePeerMetrics {
     return name;
   }
 
-  long getMinOutlierDetectionSamples() {
-    return minOutlierDetectionSamples;
-  }
-
   /**
    * Creates an instance of DataNodePeerMetrics, used for registration.
    */
-  public static DataNodePeerMetrics create(String dnName, Configuration conf) {
+  public static DataNodePeerMetrics create(String dnName) {
     final String name = "DataNodePeerActivity-" + (dnName.isEmpty()
         ? "UndefinedDataNodeName" + ThreadLocalRandom.current().nextInt()
         : dnName.replace(':', '-'));
 
-    return new DataNodePeerMetrics(name, conf);
+    return new DataNodePeerMetrics(name);
   }
 
   /**
@@ -131,7 +122,7 @@ public class DataNodePeerMetrics {
     // The metric name is the datanode ID.
     final Map<String, Double> stats =
         sendPacketDownstreamRollingAverages.getStats(
-            minOutlierDetectionSamples);
+            MIN_OUTLIER_DETECTION_SAMPLES);
     LOG.trace("DataNodePeerMetrics: Got stats: {}", stats);
 
     return slowNodeDetector.getOutliers(stats);

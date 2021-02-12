@@ -116,14 +116,7 @@ public enum CreateFlag {
    * Enforce the file to be a replicated file, no matter what its parent
    * directory's replication or erasure coding policy is.
    */
-  SHOULD_REPLICATE((short) 0x80),
-
-  /**
-   * Advise that the first block replica NOT take into account DataNode
-   * locality. The first block replica should be placed randomly within the
-   * cluster. Subsequent block replicas should follow DataNode locality rules.
-   */
-  IGNORE_CLIENT_LOCALITY((short) 0x100);
+  SHOULD_REPLICATE((short) 0x80);
 
   private final short mode;
 

@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.service.utils;
 
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.IOUtils;
@@ -33,6 +34,7 @@ import org.codehaus.jackson.map.SerializationConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.EOFException;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -175,9 +177,17 @@ public class JsonSerDeser<T> {
    * @throws JsonParseException parse problems
    * @throws JsonMappingException O/J mapping problems
    */
-  public T load(FileSystem fs, Path path) throws IOException {
+  public T load(FileSystem fs, Path path)
+    throws IOException, JsonParseException, JsonMappingException {
+    FileStatus status = fs.getFileStatus(path);
+    long len = status.getLen();
+    byte[] b = new byte[(int) len];
     FSDataInputStream dataInputStream = fs.open(path);
-    return fromStream(dataInputStream);
+    int count = dataInputStream.read(b);
+    if (count != len) {
+      throw new EOFException("Read of " + path +" finished prematurely");
+    }
+    return fromBytes(b);
   }
 
 

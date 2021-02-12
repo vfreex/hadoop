@@ -171,12 +171,6 @@ public class OpportunisticContainerAllocatorAMService
           ((AbstractYarnScheduler)rmContext.getScheduler())
               .getApplicationAttempt(appAttemptId);
 
-      if (!appAttempt.getApplicationAttemptId().equals(appAttemptId)){
-        LOG.error("Calling allocate on previous or removed or non "
-            + "existent application attempt " + appAttemptId);
-        return;
-      }
-
       OpportunisticContainerContext oppCtx =
           appAttempt.getOpportunisticContainerContext();
       oppCtx.updateNodeList(getLeastLoadedNodes());
@@ -343,11 +337,9 @@ public class OpportunisticContainerAllocatorAMService
       RMContainer rmContainer =
           SchedulerUtils.createOpportunisticRmContainer(
               rmContext, container, isRemotelyAllocated);
-      if (rmContainer!=null) {
-        rmContainer.handle(
-            new RMContainerEvent(container.getId(),
-                RMContainerEventType.ACQUIRED));
-      }
+      rmContainer.handle(
+          new RMContainerEvent(container.getId(),
+              RMContainerEventType.ACQUIRED));
     }
   }
 

@@ -51,16 +51,11 @@ import org.apache.hadoop.yarn.webapp.hamlet2.Hamlet.PRE;
 public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
 
   private final Configuration conf;
-  private Path remoteRootLogDir;
-  private String remoteRootLogDirSuffix;
 
   @Inject
-  public TFileAggregatedLogsBlock(ViewContext ctx, Configuration conf,
-      Path remoteRootLogDir, String remoteRootLogDirSuffix) {
+  public TFileAggregatedLogsBlock(ViewContext ctx, Configuration conf) {
     super(ctx);
     this.conf = conf;
-    this.remoteRootLogDir = remoteRootLogDir;
-    this.remoteRootLogDirSuffix = remoteRootLogDirSuffix;
   }
 
   @Override
@@ -75,7 +70,7 @@ public class TFileAggregatedLogsBlock extends LogAggregationHtmlBlock {
     try {
       nodeFiles = LogAggregationUtils
           .getRemoteNodeFileDir(conf, params.getAppId(),
-          params.getAppOwner(), remoteRootLogDir, remoteRootLogDirSuffix);
+              params.getAppOwner());
     } catch (RuntimeException e) {
       throw e;
     } catch (Exception ex) {

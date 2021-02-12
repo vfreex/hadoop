@@ -23,6 +23,5 @@ public enum ComponentInstanceEventType {
   STOP,
   BECOME_READY,
   BECOME_NOT_READY,
-  UPGRADE,
-  CANCEL_UPGRADE
+  UPGRADE
 }

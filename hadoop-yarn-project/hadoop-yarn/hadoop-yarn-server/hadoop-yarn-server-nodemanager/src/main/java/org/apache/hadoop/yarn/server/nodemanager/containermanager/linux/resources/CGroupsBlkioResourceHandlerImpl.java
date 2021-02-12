@@ -167,9 +167,4 @@ public class CGroupsBlkioResourceHandlerImpl implements DiskResourceHandler {
   public List<PrivilegedOperation> teardown() throws ResourceHandlerException {
     return null;
   }
-
-  @Override
-  public String toString() {
-    return CGroupsBlkioResourceHandlerImpl.class.getName();
-  }
 }

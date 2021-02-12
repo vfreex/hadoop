@@ -113,8 +113,7 @@ public class ContainerLaunchService extends AbstractService{
               .startContainerAsync(container,
                   launcher.completeContainerLaunch());
         } else {
-          LOG.info("reInitializing container {} with version {}",
-              container.getId(), componentLaunchContext.getServiceVersion());
+          LOG.info("reInitializing container {}", container.getId());
           instance.getComponent().getScheduler().getNmClient()
               .reInitializeContainerAsync(container.getId(),
                   launcher.completeContainerLaunch(), true);
@@ -140,7 +139,6 @@ public class ContainerLaunchService extends AbstractService{
     private org.apache.hadoop.yarn.service.api.records.Configuration
         configuration;
     private String launchCommand;
-    private boolean runPrivilegedContainer;
 
     public ComponentLaunchContext(String name, String serviceVersion) {
       this.name = Preconditions.checkNotNull(name);
@@ -168,10 +166,6 @@ public class ContainerLaunchService extends AbstractService{
       return launchCommand;
     }
 
-    public boolean isRunPrivilegedContainer() {
-      return runPrivilegedContainer;
-    }
-
     public ComponentLaunchContext setArtifact(Artifact artifact) {
       this.artifact = artifact;
       return this;
@@ -185,12 +179,6 @@ public class ContainerLaunchService extends AbstractService{
 
     public ComponentLaunchContext setLaunchCommand(String launchCommand) {
       this.launchCommand = launchCommand;
-      return this;
-    }
-
-    public ComponentLaunchContext setRunPrivilegedContainer(
-        boolean runPrivilegedContainer) {
-      this.runPrivilegedContainer = runPrivilegedContainer;
       return this;
     }
   }

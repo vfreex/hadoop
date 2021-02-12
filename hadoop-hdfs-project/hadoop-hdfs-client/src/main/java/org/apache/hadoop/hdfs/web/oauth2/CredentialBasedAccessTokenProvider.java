@@ -18,6 +18,8 @@
  */
 package org.apache.hadoop.hdfs.web.oauth2;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectReader;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.Request;
 import com.squareup.okhttp.RequestBody;
@@ -26,7 +28,6 @@ import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hdfs.web.URLConnectionFactory;
-import org.apache.hadoop.util.JsonSerialization;
 import org.apache.hadoop.util.Timer;
 import org.apache.http.HttpStatus;
 
@@ -54,6 +55,8 @@ import static org.apache.hadoop.hdfs.web.oauth2.Utils.notNull;
 @InterfaceStability.Evolving
 public abstract class CredentialBasedAccessTokenProvider
     extends AccessTokenProvider {
+  private static final ObjectReader READER =
+      new ObjectMapper().readerFor(Map.class);
 
   public static final String OAUTH_CREDENTIAL_KEY
       = "dfs.webhdfs.oauth2.credential";
@@ -120,8 +123,7 @@ public abstract class CredentialBasedAccessTokenProvider
             + responseBody.code() + ", text = " + responseBody.toString());
       }
 
-      Map<?, ?> response = JsonSerialization.mapReader().readValue(
-          responseBody.body().string());
+      Map<?, ?> response = READER.readValue(responseBody.body().string());
 
       String newExpiresIn = response.get(EXPIRES_IN).toString();
       timer.setExpiresIn(newExpiresIn);

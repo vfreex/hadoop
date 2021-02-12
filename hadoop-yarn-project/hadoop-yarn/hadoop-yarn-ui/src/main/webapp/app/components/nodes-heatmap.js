@@ -230,14 +230,12 @@ export default BaseChartComponent.extend({
     var node_id = data.get("id"),
         node_addr = encodeURIComponent(data.get("nodeHTTPAddress")),
         href = `#/yarn-node/${node_id}/${node_addr}/info`;
-    var nodeHostName = data.get("nodeHostName");
     var a = g.append("a")
       .attr("href", href);
     a.append("text")
-      .text(nodeHostName.length > 30 ? nodeHostName.substr(0, 30) + '...' : nodeHostName)
+      .text(data.get("nodeHostName"))
       .attr("y", yOffset + this.CELL_HEIGHT / 2 + 5)
-      .attr("x", nodeHostName.length > 30 ? xOffset + 10 : xOffset + this.CELL_WIDTH / 2)
-      .style("text-anchor", nodeHostName.length > 30 ? "start" : "middle")
+      .attr("x", xOffset + this.CELL_WIDTH / 2)
       .attr("class", this.isNodeSelected(data) ? "heatmap-cell" : "heatmap-cell-notselected");
     if (this.isNodeSelected(data)) {
       this.bindTP(a, rect);

@@ -35,8 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-import static org.apache.hadoop.util.Time.monotonicNow;
-
 /**
  * Customizable RPC performance monitor. Receives events from the RPC server
  * and aggregates them via JMX.
@@ -122,12 +120,12 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
 
   @Override
   public void startOp() {
-    START_TIME.set(monotonicNow());
+    START_TIME.set(this.getNow());
   }
 
   @Override
   public long proxyOp() {
-    PROXY_TIME.set(monotonicNow());
+    PROXY_TIME.set(this.getNow());
     long processingTime = getProcessingTime();
     if (processingTime >= 0) {
       metrics.addProcessingTime(processingTime);
@@ -190,6 +188,13 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
     metrics.incrRouterFailureLocked();
   }
 
+  /**
+   * Get current time.
+   * @return Current time in nanoseconds.
+   */
+  private long getNow() {
+    return System.nanoTime();
+  }
 
   /**
    * Get time between we receiving the operation and sending it to the Namenode.
@@ -209,7 +214,7 @@ public class FederationRPCPerformanceMonitor implements RouterRpcMonitor {
    */
   private long getProxyTime() {
     if (PROXY_TIME.get() != null && PROXY_TIME.get() > 0) {
-      return monotonicNow() - PROXY_TIME.get();
+      return getNow() - PROXY_TIME.get();
     }
     return -1;
   }

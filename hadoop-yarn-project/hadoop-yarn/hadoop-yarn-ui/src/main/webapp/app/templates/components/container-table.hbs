@@ -54,12 +54,10 @@
       <td title="{{container.nodeHttpAddress}}"><a href="{{container.masterNodeURL}}">{{container.nodeHttpAddress}}</a></td>
     </tr>
     {{/if}}
-    {{#if container.appAttemptContainerLogsURL}}
+    {{#if container.logUrl}}
     <tr>
-      <td>Logs</td>
-      <td>
-        <a href="{{container.appAttemptContainerLogsURL}}">Link</a>
-      </td>
+      <td>Log</td>
+      <td><a href="{{prepend-protocol container.logUrl}}" target="_blank">Link</a></td>
     </tr>
     {{/if}}
   </tbody>

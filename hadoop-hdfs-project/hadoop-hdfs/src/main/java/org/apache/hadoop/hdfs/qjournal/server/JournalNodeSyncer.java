@@ -38,7 +38,6 @@ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.security.SecurityUtil;
-import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -251,7 +250,7 @@ public class JournalNodeSyncer {
       editLogManifest = jnProxy.getEditLogManifestFromJournal(jid,
           nameServiceId, 0, false);
     } catch (IOException e) {
-      LOG.debug("Could not sync with Journal at {}.",
+      LOG.error("Could not sync with Journal at " +
           otherJNProxies.get(journalNodeIndexForSync), e);
       return;
     }
@@ -440,23 +439,15 @@ public class JournalNodeSyncer {
     File tmpEditsFile = jnStorage.getTemporaryEditsFile(
         log.getStartTxId(), log.getEndTxId());
 
-    if (!SecurityUtil.doAsLoginUser(() -> {
-      if (UserGroupInformation.isSecurityEnabled()) {
-        UserGroupInformation.getCurrentUser().checkTGTAndReloginFromKeytab();
+    try {
+      Util.doGetUrl(url, ImmutableList.of(tmpEditsFile), jnStorage, false,
+          logSegmentTransferTimeout, throttler);
+    } catch (IOException e) {
+      LOG.error("Download of Edit Log file for Syncing failed. Deleting temp " +
+          "file: " + tmpEditsFile);
+      if (!tmpEditsFile.delete()) {
+        LOG.warn("Deleting " + tmpEditsFile + " has failed");
       }
-      try {
-        Util.doGetUrl(url, ImmutableList.of(tmpEditsFile), jnStorage, false,
-            logSegmentTransferTimeout, throttler);
-      } catch (IOException e) {
-        LOG.error("Download of Edit Log file for Syncing failed. Deleting temp "
-            + "file: " + tmpEditsFile, e);
-        if (!tmpEditsFile.delete()) {
-          LOG.warn("Deleting " + tmpEditsFile + " has failed");
-        }
-        return false;
-      }
-      return true;
-    })) {
       return false;
     }
     LOG.info("Downloaded file " + tmpEditsFile.getName() + " of size " +

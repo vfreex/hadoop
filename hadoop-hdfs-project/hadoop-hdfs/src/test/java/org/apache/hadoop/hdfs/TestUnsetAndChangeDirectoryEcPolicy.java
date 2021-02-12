@@ -23,7 +23,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
-import org.apache.hadoop.hdfs.protocol.NoECPolicySetException;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
 import org.apache.hadoop.io.erasurecode.ErasureCodeNative;
 import org.apache.hadoop.io.erasurecode.rawcoder.NativeRSRawErasureCoderFactory;
@@ -99,11 +98,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
 
     fs.mkdirs(dirPath);
     // Test unset a directory which has no EC policy
-    try {
-      fs.unsetErasureCodingPolicy(dirPath);
-      fail();
-    } catch (NoECPolicySetException e) {
-    }
+    fs.unsetErasureCodingPolicy(dirPath);
     // Set EC policy on directory
     fs.setErasureCodingPolicy(dirPath, ecPolicy.getName());
 
@@ -131,8 +126,8 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
   }
 
   /*
-   * Test nested directory with different EC policy.
-   */
+  * Test nested directory with different EC policy.
+  */
   @Test
   public void testNestedEcPolicy() throws Exception {
     final int numBlocks = 1;
@@ -204,11 +199,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final Path replicateFilePath = new Path(rootPath, "rep_file");
 
     // Test unset root path which has no EC policy
-    try {
-      fs.unsetErasureCodingPolicy(rootPath);
-      fail();
-    } catch (NoECPolicySetException e) {
-    }
+    fs.unsetErasureCodingPolicy(rootPath);
     // Set EC policy on root path
     fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());
     DFSTestUtil.createFile(fs, ecFilePath, fileLen, (short) 1, 0L);
@@ -247,11 +238,7 @@ public class TestUnsetAndChangeDirectoryEcPolicy {
     final ErasureCodingPolicy ec32Policy = SystemErasureCodingPolicies
         .getByID(SystemErasureCodingPolicies.RS_3_2_POLICY_ID);
 
-    try {
-      fs.unsetErasureCodingPolicy(rootPath);
-      fail();
-    } catch (NoECPolicySetException e) {
-    }
+    fs.unsetErasureCodingPolicy(rootPath);
     fs.setErasureCodingPolicy(rootPath, ecPolicy.getName());
     // Create RS(6,3) EC policy file
     DFSTestUtil.createFile(fs, ec63FilePath, fileLen, (short) 1, 0L);

@@ -29,12 +29,11 @@ public class JavaProcess {
 
   private Process process = null;
 
-  public JavaProcess(Class<?> clazz, File output)
-      throws IOException, InterruptedException {
-    this(clazz, null, output);
+  public JavaProcess(Class<?> clazz) throws IOException, InterruptedException {
+    this(clazz, null);
   }
 
-  public JavaProcess(Class<?> clazz, List<String> addClasspaths, File output)
+  public JavaProcess(Class<?> clazz, List<String> addClasspaths)
       throws IOException, InterruptedException {
     String javaHome = System.getProperty("java.home");
     String javaBin =
@@ -49,9 +48,7 @@ public class JavaProcess {
     String className = clazz.getCanonicalName();
     ProcessBuilder builder =
         new ProcessBuilder(javaBin, "-cp", classpath, className);
-    builder.redirectInput(ProcessBuilder.Redirect.INHERIT);
-    builder.redirectOutput(output);
-    builder.redirectError(output);
+    builder.inheritIO();
     process = builder.start();
   }
 

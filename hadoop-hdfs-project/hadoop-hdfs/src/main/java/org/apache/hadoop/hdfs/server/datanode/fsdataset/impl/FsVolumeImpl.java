@@ -164,13 +164,6 @@ public class FsVolumeImpl implements FsVolumeSpi {
     this.storageType = storageLocation.getStorageType();
     this.configuredCapacity = -1;
     this.usage = usage;
-    if (this.usage != null) {
-      reserved = new ReservedSpaceCalculator.Builder(conf)
-          .setUsage(this.usage).setStorageType(storageType).build();
-    } else {
-      reserved = null;
-      LOG.warn("Setting reserved to null as usage is null");
-    }
     if (currentDir != null) {
       File parent = currentDir.getParentFile();
       cacheExecutor = initializeCacheExecutor(parent);
@@ -181,6 +174,8 @@ public class FsVolumeImpl implements FsVolumeSpi {
     }
     this.conf = conf;
     this.fileIoProvider = fileIoProvider;
+    this.reserved = new ReservedSpaceCalculator.Builder(conf)
+        .setUsage(usage).setStorageType(storageType).build();
   }
 
   protected ThreadPoolExecutor initializeCacheExecutor(File parent) {
@@ -196,10 +191,9 @@ public class FsVolumeImpl implements FsVolumeSpi {
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_KEY,
         DFSConfigKeys.DFS_DATANODE_FSDATASETCACHE_MAX_THREADS_PER_VOLUME_DEFAULT);
 
-    String escapedPath = parent.toString().replaceAll("%", "%%");
     ThreadFactory workerFactory = new ThreadFactoryBuilder()
         .setDaemon(true)
-        .setNameFormat("FsVolumeImplWorker-" + escapedPath + "-%d")
+        .setNameFormat("FsVolumeImplWorker-" + parent.toString() + "-%d")
         .build();
     ThreadPoolExecutor executor = new ThreadPoolExecutor(
         1, maxNumThreads,
@@ -486,7 +480,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
   }
 
   long getReserved(){
-    return reserved != null ? reserved.getReserved() : 0;
+    return reserved.getReserved();
   }
 
   @VisibleForTesting
@@ -1375,7 +1369,7 @@ public class FsVolumeImpl implements FsVolumeSpi {
       if (!Block.isBlockFilename(file)) {
         if (isBlockMetaFile(Block.BLOCK_FILE_PREFIX, file.getName())) {
           long blockId = Block.getBlockId(file.getName());
-          verifyFileLocation(file, bpFinalizedDir,
+          verifyFileLocation(file.getParentFile(), bpFinalizedDir,
               blockId);
           report.add(new ScanInfo(blockId, null, file, this));
         }

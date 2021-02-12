@@ -90,7 +90,7 @@ public class TestAMLaunchFailure {
 //    }
 //
 //    @Override
-//    public void addApplicationIfAbsent(ApplicationId applicationId,
+//    public void addApplication(ApplicationId applicationId,
 //        ApplicationMaster master, String user, String queue, Priority priority
 //        , ApplicationStore appStore)
 //        throws IOException {

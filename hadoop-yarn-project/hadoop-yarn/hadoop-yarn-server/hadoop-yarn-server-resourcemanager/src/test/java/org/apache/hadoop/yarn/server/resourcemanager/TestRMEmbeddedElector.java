@@ -30,16 +30,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
 import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,8 +51,6 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
 
   private Configuration conf;
   private AtomicBoolean callbackCalled;
-  private AtomicInteger transitionToActiveCounter;
-  private AtomicInteger transitionToStandbyCounter;
 
   private enum SyncTestType {
     ACTIVE,
@@ -83,8 +78,6 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     conf.setLong(YarnConfiguration.CLIENT_FAILOVER_SLEEPTIME_BASE_MS, 100L);
 
     callbackCalled = new AtomicBoolean(false);
-    transitionToActiveCounter = new AtomicInteger(0);
-    transitionToStandbyCounter = new AtomicInteger(0);
   }
 
   /**
@@ -113,7 +106,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    */
   @Test
   public void testCallbackSynchronization()
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     testCallbackSynchronization(SyncTestType.ACTIVE);
     testCallbackSynchronization(SyncTestType.STANDBY);
     testCallbackSynchronization(SyncTestType.NEUTRAL);
@@ -127,10 +120,9 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param type the type of test to run
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronization(SyncTestType type)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     AdminService as = mock(AdminService.class);
     RMContext rc = mock(RMContext.class);
     ResourceManager rm = mock(ResourceManager.class);
@@ -139,17 +131,6 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     myConf.setInt(YarnConfiguration.RM_ZK_TIMEOUT_MS, 50);
     when(rm.getRMContext()).thenReturn(rc);
     when(rc.getRMAdminService()).thenReturn(as);
-
-    doAnswer(invocation -> {
-      transitionToActiveCounter.incrementAndGet();
-      return null;
-    }).when(as).transitionToActive(any());
-    transitionToActiveCounter.set(0);
-    doAnswer(invocation -> {
-      transitionToStandbyCounter.incrementAndGet();
-      return null;
-    }).when(as).transitionToStandby(any());
-    transitionToStandbyCounter.set(0);
 
     ActiveStandbyElectorBasedElectorService ees =
         new ActiveStandbyElectorBasedElectorService(rm);
@@ -187,16 +168,15 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param ees the embedded elector service
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronizationActive(AdminService as,
       ActiveStandbyElectorBasedElectorService ees)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     ees.becomeActive();
 
-    GenericTestUtils.waitFor(
-        () -> transitionToActiveCounter.get() >= 1, 500, 10 * 1000);
-    verify(as, times(1)).transitionToActive(any());
+    Thread.sleep(100);
+
+    verify(as).transitionToActive(any());
     verify(as, never()).transitionToStandby(any());
   }
 
@@ -208,16 +188,16 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param ees the embedded elector service
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronizationStandby(AdminService as,
       ActiveStandbyElectorBasedElectorService ees)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     ees.becomeStandby();
 
-    GenericTestUtils.waitFor(
-        () -> transitionToStandbyCounter.get() >= 1, 500, 10 * 1000);
-    verify(as, times(1)).transitionToStandby(any());
+    Thread.sleep(100);
+
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
   }
 
   /**
@@ -227,16 +207,16 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param ees the embedded elector service
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronizationNeutral(AdminService as,
       ActiveStandbyElectorBasedElectorService ees)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     ees.enterNeutralMode();
 
-    GenericTestUtils.waitFor(
-        () -> transitionToStandbyCounter.get() >= 1, 500, 10 * 1000);
-    verify(as, times(1)).transitionToStandby(any());
+    Thread.sleep(100);
+
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
   }
 
   /**
@@ -247,11 +227,10 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param ees the embedded elector service
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronizationTimingActive(AdminService as,
       ActiveStandbyElectorBasedElectorService ees)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     synchronized (ees.zkDisconnectLock) {
       // Sleep while holding the lock so that the timer thread can't do
       // anything when it runs.  Sleep until we're pretty sure the timer thread
@@ -267,9 +246,7 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     // going to do, hopefully nothing.
     Thread.sleep(50);
 
-    GenericTestUtils.waitFor(
-        () -> transitionToActiveCounter.get() >= 1, 500, 10 * 1000);
-    verify(as, times(1)).transitionToActive(any());
+    verify(as).transitionToActive(any());
     verify(as, never()).transitionToStandby(any());
   }
 
@@ -281,11 +258,10 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
    * @param ees the embedded elector service
    * @throws IOException if there's an issue transitioning
    * @throws InterruptedException if interrupted
-   * @throws TimeoutException if waitFor timeout reached
    */
   private void testCallbackSynchronizationTimingStandby(AdminService as,
       ActiveStandbyElectorBasedElectorService ees)
-      throws IOException, InterruptedException, TimeoutException {
+      throws IOException, InterruptedException {
     synchronized (ees.zkDisconnectLock) {
       // Sleep while holding the lock so that the timer thread can't do
       // anything when it runs.  Sleep until we're pretty sure the timer thread
@@ -301,9 +277,8 @@ public class TestRMEmbeddedElector extends ClientBaseWithFixes {
     // going to do, hopefully nothing.
     Thread.sleep(50);
 
-    GenericTestUtils.waitFor(
-        () -> transitionToStandbyCounter.get() >= 1, 500, 10 * 1000);
-    verify(as, times(1)).transitionToStandby(any());
+    verify(as, atLeast(1)).transitionToStandby(any());
+    verify(as, atMost(1)).transitionToStandby(any());
   }
 
   /**

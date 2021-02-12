@@ -30,30 +30,27 @@ import org.apache.hadoop.classification.InterfaceStability;
  */
 @InterfaceStability.Evolving
 public interface FailoverProxyProvider<T> extends Closeable {
-  static class ProxyInfo<T> {
-    public T proxy;
+  public static final class ProxyInfo<T> {
+    public final T proxy;
     /*
      * The information (e.g., the IP address) of the current proxy object. It
      * provides information for debugging purposes.
      */
-    public String proxyInfo;
+    public final String proxyInfo;
 
     public ProxyInfo(T proxy, String proxyInfo) {
       this.proxy = proxy;
       this.proxyInfo = proxyInfo;
     }
 
-    private String proxyName() {
-      return proxy != null ? proxy.getClass().getSimpleName() : "UnknownProxy";
-    }
-
     public String getString(String methodName) {
-      return proxyName() + "." + methodName + " over " + proxyInfo;
+      return proxy.getClass().getSimpleName() + "." + methodName
+          + " over " + proxyInfo;
     }
 
     @Override
     public String toString() {
-      return proxyName() + " over " + proxyInfo;
+      return proxy.getClass().getSimpleName() + " over " + proxyInfo;
     }
   }
 

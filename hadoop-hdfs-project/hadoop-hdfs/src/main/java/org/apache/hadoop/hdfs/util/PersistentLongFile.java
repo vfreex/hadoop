@@ -98,8 +98,6 @@ public class PersistentLongFile {
         val = Long.parseLong(br.readLine());
         br.close();
         br = null;
-      } catch (NumberFormatException e) {
-        throw new IOException(e);
       } finally {
         IOUtils.cleanup(LOG, br);
       }

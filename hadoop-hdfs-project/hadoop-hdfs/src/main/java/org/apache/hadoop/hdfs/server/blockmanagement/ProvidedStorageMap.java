@@ -396,8 +396,7 @@ public class ProvidedStorageMap {
     }
 
     @Override
-    public void addBlockToBeReplicated(Block block,
-        DatanodeStorageInfo[] targets) {
+    void addBlockToBeReplicated(Block block, DatanodeStorageInfo[] targets) {
       // pick a random datanode, delegate to it
       DatanodeDescriptor node = chooseRandom(targets);
       if (node != null) {

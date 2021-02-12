@@ -72,7 +72,7 @@ public class QueuePlacementPolicy {
     }
     this.rules = rules;
     this.configuredQueues = configuredQueues;
-    this.groups = Groups.getUserToGroupsMappingService(conf);
+    groups = new Groups(conf);
   }
   
   /**

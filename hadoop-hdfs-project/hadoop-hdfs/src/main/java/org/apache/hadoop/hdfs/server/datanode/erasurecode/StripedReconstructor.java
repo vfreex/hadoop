@@ -25,7 +25,6 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.server.datanode.CachingStrategy;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
 import org.apache.hadoop.io.ByteBufferPool;
 import org.apache.hadoop.io.ElasticByteBufferPool;
 import org.apache.hadoop.io.erasurecode.CodecUtil;
@@ -223,7 +222,7 @@ abstract class StripedReconstructor {
     return cachingStrategy;
   }
 
-  CompletionService<BlockReadStats> createReadService() {
+  CompletionService<Void> createReadService() {
     return erasureCodingWorker.createReadService();
   }
 

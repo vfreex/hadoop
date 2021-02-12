@@ -65,7 +65,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
   }
 
   @Override
-  public RecoveryIterator<RecoveredContainerState> getContainerStateIterator()
+  public List<RecoveredContainerState> loadContainersState()
       throws IOException {
     throw new UnsupportedOperationException(
         "Recovery not supported by this state store");
@@ -73,7 +73,7 @@ public class NMNullStateStoreService extends NMStateStoreService {
 
   @Override
   public void storeContainer(ContainerId containerId, int version,
-      long startTime, StartContainerRequest startRequest) {
+      long startTime, StartContainerRequest startRequest) throws IOException {
   }
 
   @Override

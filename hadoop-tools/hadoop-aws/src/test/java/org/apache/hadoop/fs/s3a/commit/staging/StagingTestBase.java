@@ -49,7 +49,6 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.mockito.invocation.InvocationOnMock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -516,21 +515,6 @@ public class StagingTestBase {
   }
 
   /**
-   * InvocationOnMock.getArgumentAt comes and goes with Mockito versions; this
-   * helper method is designed to be resilient to change.
-   * @param invocation invocation to query
-   * @param index argument index
-   * @param clazz class of return type
-   * @param <T> type of return
-   * @return the argument of the invocation, cast to the given type.
-   */
-  @SuppressWarnings("unchecked")
-  private static<T> T getArgumentAt(InvocationOnMock invocation, int index,
-      Class<T> clazz) {
-    return (T)invocation.getArguments()[index];
-  }
-
-  /**
    * Instantiate mock client with the results and errors requested.
    * @param results results to accrue
    * @param errors when (if any) to fail
@@ -555,7 +539,7 @@ public class StagingTestBase {
                   "Mock Fail on init " + results.requests.size());
             }
             String uploadId = UUID.randomUUID().toString();
-            InitiateMultipartUploadRequest req = getArgumentAt(invocation,
+            InitiateMultipartUploadRequest req = invocation.getArgumentAt(
                 0, InitiateMultipartUploadRequest.class);
             results.requests.put(uploadId, req);
             results.activeUploads.put(uploadId, req.getKey());
@@ -577,7 +561,7 @@ public class StagingTestBase {
               throw new AmazonClientException(
                   "Mock Fail on upload " + results.parts.size());
             }
-            UploadPartRequest req = getArgumentAt(invocation,
+            UploadPartRequest req = invocation.getArgumentAt(
                 0, UploadPartRequest.class);
             results.parts.add(req);
             String etag = UUID.randomUUID().toString();
@@ -604,7 +588,7 @@ public class StagingTestBase {
               throw new AmazonClientException(
                   "Mock Fail on commit " + results.commits.size());
             }
-            CompleteMultipartUploadRequest req = getArgumentAt(invocation,
+            CompleteMultipartUploadRequest req = invocation.getArgumentAt(
                 0, CompleteMultipartUploadRequest.class);
             results.commits.add(req);
             results.activeUploads.remove(req.getUploadId());
@@ -624,7 +608,7 @@ public class StagingTestBase {
           throw new AmazonClientException(
               "Mock Fail on abort " + results.aborts.size());
         }
-        AbortMultipartUploadRequest req = getArgumentAt(invocation,
+        AbortMultipartUploadRequest req = invocation.getArgumentAt(
             0, AbortMultipartUploadRequest.class);
         String id = req.getUploadId();
         String p = results.activeUploads.remove(id);
@@ -646,7 +630,7 @@ public class StagingTestBase {
     doAnswer(invocation -> {
       LOG.debug("deleteObject for {}", mockClient);
       synchronized (lock) {
-        results.deletes.add(getArgumentAt(invocation,
+        results.deletes.add(invocation.getArgumentAt(
             0, DeleteObjectRequest.class));
         return null;
       }
@@ -659,8 +643,8 @@ public class StagingTestBase {
       LOG.debug("deleteObject for {}", mockClient);
       synchronized (lock) {
         results.deletes.add(new DeleteObjectRequest(
-            getArgumentAt(invocation, 0, String.class),
-            getArgumentAt(invocation, 1, String.class)
+            invocation.getArgumentAt(0, String.class),
+            invocation.getArgumentAt(1, String.class)
         ));
         return null;
       }

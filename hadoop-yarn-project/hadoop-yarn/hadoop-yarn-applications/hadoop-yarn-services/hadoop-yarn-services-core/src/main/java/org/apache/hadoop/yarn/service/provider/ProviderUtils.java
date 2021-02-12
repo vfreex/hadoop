@@ -167,8 +167,9 @@ public class ProviderUtils implements YarnServiceConstants {
   public static Path initCompInstanceDir(SliderFileSystem fs,
       ContainerLaunchService.ComponentLaunchContext compLaunchContext,
       ComponentInstance instance) {
-    Path compDir = fs.getComponentDir(compLaunchContext.getServiceVersion(),
-        compLaunchContext.getName());
+    Path compDir = new Path(new Path(fs.getAppDir(), "components"),
+        compLaunchContext.getServiceVersion() + "/" +
+            compLaunchContext.getName());
     Path compInstanceDir = new Path(compDir, instance.getCompInstanceName());
     instance.setCompInstanceDir(compInstanceDir);
     return compInstanceDir;
@@ -183,9 +184,7 @@ public class ProviderUtils implements YarnServiceConstants {
       ServiceContext context) throws IOException {
     Path compInstanceDir = initCompInstanceDir(fs, compLaunchContext, instance);
     if (!fs.getFileSystem().exists(compInstanceDir)) {
-      log.info("{} version {} : Creating dir on hdfs: {}",
-          instance.getCompInstanceId(), compLaunchContext.getServiceVersion(),
-          compInstanceDir);
+      log.info(instance.getCompInstanceId() + ": Creating dir on hdfs: " + compInstanceDir);
       fs.getFileSystem().mkdirs(compInstanceDir,
           new FsPermission(FsAction.ALL, FsAction.NONE, FsAction.NONE));
     } else {

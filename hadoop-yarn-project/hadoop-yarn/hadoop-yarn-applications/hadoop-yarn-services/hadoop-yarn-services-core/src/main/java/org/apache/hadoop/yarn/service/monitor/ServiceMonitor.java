@@ -24,7 +24,6 @@ import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.service.ServiceContext;
 import org.apache.hadoop.yarn.service.component.Component;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstance;
-import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState;
 import org.apache.hadoop.yarn.service.conf.YarnServiceConf;
 import org.apache.hadoop.yarn.service.component.ComponentEvent;
 import org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEvent;
@@ -38,7 +37,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState.REINITIALIZED;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceState.STARTED;
 import static org.apache.hadoop.yarn.service.component.ComponentEventType.FLEX;
 import static org.apache.hadoop.yarn.service.component.instance.ComponentInstanceEventType.BECOME_NOT_READY;
@@ -110,9 +108,8 @@ public class ServiceMonitor extends AbstractService {
         ComponentInstance instance = entry.getValue();
 
         ProbeStatus status = instance.ping();
-        ComponentInstanceState instanceState = instance.getState();
         if (status.isSuccess()) {
-          if (instanceState == STARTED || instanceState == REINITIALIZED) {
+          if (instance.getState() == STARTED) {
             LOG.info("Readiness check succeeded for {}: {}", instance
                 .getCompInstanceName(), status);
             // synchronously update the state.

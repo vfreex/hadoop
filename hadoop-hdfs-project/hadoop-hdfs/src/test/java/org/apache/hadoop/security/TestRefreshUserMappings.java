@@ -34,6 +34,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
@@ -45,8 +46,6 @@ import org.apache.hadoop.security.authorize.AuthorizationException;
 import org.apache.hadoop.security.authorize.DefaultImpersonationProvider;
 import org.apache.hadoop.security.authorize.ProxyUsers;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.slf4j.event.Level;
 import org.junit.After;
 import org.junit.Before;
@@ -54,8 +53,6 @@ import org.junit.Test;
 
 
 public class TestRefreshUserMappings {
-  private static final Logger LOG = LoggerFactory.getLogger(
-      TestRefreshUserMappings.class);
   private MiniDFSCluster cluster;
   Configuration config;
   private static final long groupRefreshTimeoutSec = 1;
@@ -122,42 +119,42 @@ public class TestRefreshUserMappings {
     Groups groups = Groups.getUserToGroupsMappingService(config);
     String user = UserGroupInformation.getCurrentUser().getUserName();
 
-    LOG.debug("First attempt:");
+    System.out.println("First attempt:");
     List<String> g1 = groups.getGroups(user);
-    LOG.debug(g1.toString());
-
-    LOG.debug("Second attempt, should be the same:");
+    String [] str_groups = new String [g1.size()];
+    g1.toArray(str_groups);
+    System.out.println(Arrays.toString(str_groups));
+    
+    System.out.println("Second attempt, should be the same:");
     List<String> g2 = groups.getGroups(user);
-    LOG.debug(g2.toString());
+    g2.toArray(str_groups);
+    System.out.println(Arrays.toString(str_groups));
     for(int i=0; i<g2.size(); i++) {
       assertEquals("Should be same group ", g1.get(i), g2.get(i));
     }
 
     // Test refresh command
     admin.run(args);
-    LOG.debug("Third attempt(after refresh command), should be different:");
+    System.out.println("Third attempt(after refresh command), should be different:");
     List<String> g3 = groups.getGroups(user);
-    LOG.debug(g3.toString());
+    g3.toArray(str_groups);
+    System.out.println(Arrays.toString(str_groups));
     for(int i=0; i<g3.size(); i++) {
-      assertFalse("Should be different group: "
-              + g1.get(i) + " and " + g3.get(i), g1.get(i).equals(g3.get(i)));
+      assertFalse("Should be different group: " + g1.get(i) + " and " + g3.get(i), 
+          g1.get(i).equals(g3.get(i)));
     }
-
+    
     // Test timeout
-    LOG.debug("Fourth attempt(after timeout), should be different:");
-    GenericTestUtils.waitFor(() -> {
-      List<String> g4;
-      try {
-        g4 = groups.getGroups(user);
-      } catch (IOException e) {
-        return false;
-      }
-      LOG.debug(g4.toString());
-      // if g4 is the same as g3, wait and retry
-      return !g3.equals(g4);
-    }, 50, Math.toIntExact(groupRefreshTimeoutSec * 1000 * 30));
+    Thread.sleep(groupRefreshTimeoutSec * 1500);
+    System.out.println("Fourth attempt(after timeout), should be different:");
+    List<String> g4 = groups.getGroups(user);
+    g4.toArray(str_groups);
+    System.out.println(Arrays.toString(str_groups));
+    for(int i=0; i<g4.size(); i++) {
+      assertFalse("Should be different group ", g3.get(i).equals(g4.get(i)));
+    }
   }
-
+  
   @Test
   public void testRefreshSuperUserGroupsConfiguration() throws Exception {
     final String SUPER_USER = "super_user";

@@ -394,14 +394,13 @@ public class TestDFSClientRetries {
           Mockito.anyString());
       DFSClient client = new DFSClient(null, spyNN, conf, null);
       // Get hold of the lease renewer instance used by the client
-      final LeaseRenewer leaseRenewer1 = client.getLeaseRenewer();
-      leaseRenewer1.setRenewalTime(100);
+      LeaseRenewer leaseRenewer = client.getLeaseRenewer();
+      leaseRenewer.setRenewalTime(100);
       OutputStream out1 = client.create(file1, false);
 
       Mockito.verify(spyNN, timeout(10000).times(1)).renewLease(
           Mockito.anyString());
-      verifyEmptyLease(leaseRenewer1);
-      GenericTestUtils.waitFor(() -> !(leaseRenewer1.isRunning()), 100, 10000);
+      verifyEmptyLease(leaseRenewer);
       try {
         out1.write(new byte[256]);
         fail("existing output stream should be aborted");
@@ -414,14 +413,14 @@ public class TestDFSClientRetries {
       // throws SocketTimeoutException.
       Mockito.doNothing().when(spyNN).renewLease(
           Mockito.anyString());
-      final LeaseRenewer leaseRenewer2 = client.getLeaseRenewer();
-      leaseRenewer2.setRenewalTime(100);
+      leaseRenewer = client.getLeaseRenewer();
+      leaseRenewer.setRenewalTime(100);
       OutputStream out2 = client.create(file2, false);
       Mockito.verify(spyNN, timeout(10000).times(2)).renewLease(
           Mockito.anyString());
       out2.write(new byte[256]);
       out2.close();
-      verifyEmptyLease(leaseRenewer2);
+      verifyEmptyLease(leaseRenewer);
     } finally {
       cluster.shutdown();
     }
@@ -766,7 +765,11 @@ public class TestDFSClientRetries {
   }
 
   private void verifyEmptyLease(LeaseRenewer leaseRenewer) throws Exception {
-    GenericTestUtils.waitFor(() -> leaseRenewer.isEmpty(), 100, 10000);
+    int sleepCount = 0;
+    while (!leaseRenewer.isEmpty() && sleepCount++ < 20) {
+      Thread.sleep(500);
+    }
+    assertTrue("Lease should be empty.", leaseRenewer.isEmpty());
   }
 
   class DFSClientReader implements Runnable {

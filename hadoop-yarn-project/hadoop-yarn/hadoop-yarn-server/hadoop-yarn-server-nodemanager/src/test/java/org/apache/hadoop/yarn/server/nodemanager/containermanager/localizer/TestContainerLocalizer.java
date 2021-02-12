@@ -37,8 +37,6 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,14 +68,12 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.test.GenericTestUtils;
-import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.Shell.ShellCommandExecutor;
 import org.apache.hadoop.yarn.api.records.LocalResource;
 import org.apache.hadoop.yarn.api.records.LocalResourceType;
 import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.URL;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnException;
 import org.apache.hadoop.yarn.exceptions.YarnRuntimeException;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -240,33 +236,6 @@ public class TestContainerLocalizer {
       Assert.fail("Localization succeeded unexpectedly!");
     } catch (IOException e) {
       Assert.assertTrue(e.getMessage().contains("Sigh, no token!"));
-    }
-  }
-
-  @Test
-  public void testDiskCheckFailure() throws Exception {
-    Configuration conf = new Configuration();
-    conf.set(YarnConfiguration.DISK_VALIDATOR, "read-write");
-    FileContext lfs = FileContext.getLocalFSFileContext(conf);
-    Path fileCacheDir = lfs.makeQualified(new Path(basedir, "filecache"));
-    lfs.mkdir(fileCacheDir, FsPermission.getDefault(), true);
-    RecordFactory recordFactory = mock(RecordFactory.class);
-    ContainerLocalizer localizer = new ContainerLocalizer(lfs,
-        UserGroupInformation.getCurrentUser().getUserName(), "application_01",
-        "container_01", String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
-        "container_01"), new ArrayList<Path>(), recordFactory) {
-      @Override
-      Configuration initConfiguration() {
-        return conf;
-      }
-    };
-    LocalResource rsrc = mock(LocalResource.class);
-    Path destDirPath = new Path(fileCacheDir, "11");
-    try {
-      localizer.download(destDirPath, rsrc,
-          UserGroupInformation.getCurrentUser());
-    } catch (DiskErrorException ex) {
-      fail(ex.getCause().toString());
     }
   }
 
@@ -478,9 +447,7 @@ public class TestContainerLocalizer {
     FakeContainerLocalizer(FileContext lfs, String user, String appId,
         String localizerId, List<Path> localDirs,
         RecordFactory recordFactory) throws IOException {
-      super(lfs, user, appId, localizerId,
-          String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT, containerId),
-          localDirs, recordFactory);
+      super(lfs, user, appId, localizerId, localDirs, recordFactory);
     }
 
     FakeLongDownload getDownloader() {
@@ -556,7 +523,7 @@ public class TestContainerLocalizer {
       DataInputBuffer appTokens = createFakeCredentials(random, 10);
       tokenPath =
         lfs.makeQualified(new Path(
-            String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
+              String.format(ContainerLocalizer.TOKEN_FILE_NAME_FMT,
                   containerId)));
       doReturn(new FSDataInputStream(new FakeFSDataInputStream(appTokens))
           ).when(spylfs).open(tokenPath);
@@ -688,8 +655,7 @@ static DataInputBuffer createFakeCredentials(Random r, int nTok)
     RecordFactory recordFactory = mock(RecordFactory.class);
     ContainerLocalizer localizer = new ContainerLocalizer(lfs,
         UserGroupInformation.getCurrentUser().getUserName(), "application_01",
-        "container_01", String.format(ContainerExecutor.TOKEN_FILE_NAME_FMT,
-        "container_01"), new ArrayList<Path>(), recordFactory);
+        "container_01", new ArrayList<Path>(), recordFactory);
     LocalResource rsrc = mock(LocalResource.class);
     when(rsrc.getVisibility()).thenReturn(LocalResourceVisibility.PRIVATE);
     Path destDirPath = new Path(fileCacheDir, "0/0/85");

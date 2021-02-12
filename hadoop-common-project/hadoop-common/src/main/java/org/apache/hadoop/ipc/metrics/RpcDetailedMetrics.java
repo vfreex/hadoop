@@ -66,12 +66,12 @@ public class RpcDetailedMetrics {
 
   /**
    * Add an RPC processing time sample
-   * @param rpcCallName of the RPC call
+   * @param name  of the RPC call
    * @param processingTime  the processing time
    */
   //@Override // some instrumentation interface
-  public void addProcessingTime(String rpcCallName, long processingTime) {
-    rates.add(rpcCallName, processingTime);
+  public void addProcessingTime(String name, int processingTime) {
+    rates.add(name, processingTime);
   }
 
   public void addDeferredProcessingTime(String name, long processingTime) {
@@ -82,7 +82,5 @@ public class RpcDetailedMetrics {
    * Shutdown the instrumentation for the process
    */
   //@Override // some instrumentation interface
-  public void shutdown() {
-    DefaultMetricsSystem.instance().unregisterSource(name);
-  }
+  public void shutdown() {}
 }

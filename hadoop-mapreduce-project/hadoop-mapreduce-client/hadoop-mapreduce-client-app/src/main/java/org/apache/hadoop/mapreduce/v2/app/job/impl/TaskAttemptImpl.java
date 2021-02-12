@@ -382,10 +382,6 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
          DIAGNOSTIC_INFORMATION_UPDATE_TRANSITION)
-     .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
-         TaskAttemptStateInternal.FAILED,
-         TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
-         new TooManyFetchFailureTransition())
      // ignore-able events
      .addTransition(TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER,
@@ -475,16 +471,12 @@ public abstract class TaskAttemptImpl implements
          TaskAttemptStateInternal.COMMIT_PENDING,
          TaskAttemptEventType.TA_COMMIT_PENDING)
 
-      // Transitions from SUCCESS_CONTAINER_CLEANUP state
-      // kill and cleanup the container
-      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-          TaskAttemptStateInternal.SUCCEEDED,
-          TaskAttemptEventType.TA_CONTAINER_CLEANED)
-      .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
-          TaskAttemptStateInternal.FAILED,
-          TaskAttemptEventType.TA_TOO_MANY_FETCH_FAILURE,
-          new TooManyFetchFailureTransition())
-      .addTransition(
+     // Transitions from SUCCESS_CONTAINER_CLEANUP state
+     // kill and cleanup the container
+     .addTransition(TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
+         TaskAttemptStateInternal.SUCCEEDED,
+         TaskAttemptEventType.TA_CONTAINER_CLEANED)
+     .addTransition(
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptStateInternal.SUCCESS_CONTAINER_CLEANUP,
           TaskAttemptEventType.TA_DIAGNOSTICS_UPDATE,
@@ -2156,10 +2148,6 @@ public abstract class TaskAttemptImpl implements
     @SuppressWarnings("unchecked")
     @Override
     public void transition(TaskAttemptImpl taskAttempt, TaskAttemptEvent event) {
-      if (taskAttempt.getInternalState() ==
-          TaskAttemptStateInternal.SUCCESS_FINISHING_CONTAINER) {
-        sendContainerCleanup(taskAttempt, event);
-      }
       TaskAttemptTooManyFetchFailureEvent fetchFailureEvent =
           (TaskAttemptTooManyFetchFailureEvent) event;
       // too many fetch failure can only happen for map tasks

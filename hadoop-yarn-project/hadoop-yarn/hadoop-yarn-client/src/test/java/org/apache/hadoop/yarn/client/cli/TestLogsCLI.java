@@ -246,9 +246,6 @@ public class TestLogsCLI {
     pw.println("                                              --client_max_retries to");
     pw.println("                                              create a retry client. The");
     pw.println("                                              default value is 1000.");
-    pw.println(" -clusterId <Cluster ID>                      ClusterId. By default, it");
-    pw.println("                                              will take default cluster id");
-    pw.println("                                              from the RM");
     pw.println(" -containerId <Container ID>                  ContainerId. By default, it");
     pw.println("                                              will print all available");
     pw.println("                                              logs. Work with -log_files");
@@ -370,7 +367,7 @@ public class TestLogsCLI {
 
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs-tfile/application_0_0001");
+            + "/logs/application_0_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -931,8 +928,7 @@ public class TestLogsCLI {
 
       // create the remote app dir for app
       // but for a different user testUser"
-      Path path = new Path(remoteLogRootDir + testUser + "/logs-tfile/"
-          + appId);
+      Path path = new Path(remoteLogRootDir + testUser + "/logs/" + appId);
       if (fs.exists(path)) {
         fs.delete(path, true);
       }
@@ -998,7 +994,7 @@ public class TestLogsCLI {
           System.currentTimeMillis(), 1000);
       String priorityUser = "priority";
       Path pathWithoutPerm = new Path(remoteLogRootDir + priorityUser
-          + "/logs-tfile/" + appTest);
+          + "/logs/" + appTest);
       if (fs.exists(pathWithoutPerm)) {
         fs.delete(pathWithoutPerm, true);
       }
@@ -1356,7 +1352,7 @@ public class TestLogsCLI {
     assertNotNull(harUrl);
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-            + "/logs-tfile/application_1440536969523_0001");
+            + "/logs/application_1440536969523_0001");
     if (fs.exists(path)) {
       fs.delete(path, true);
     }
@@ -1417,7 +1413,7 @@ public class TestLogsCLI {
     }
     Path path =
         new Path(remoteLogRootDir + ugi.getShortUserName()
-        + "/logs-tfile/application_0_0001");
+        + "/logs/application_0_0001");
 
     if (fs.exists(path)) {
       fs.delete(path, true);

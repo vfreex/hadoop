@@ -18,7 +18,6 @@
 
 package org.apache.hadoop.mapreduce;
 
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.never;
@@ -26,11 +25,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.spy;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,9 +46,7 @@ import org.apache.hadoop.hdfs.protocol.SystemErasureCodingPolicies;
 import org.apache.hadoop.mapred.JobConf;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
-
 
 /**
  * A class for unit testing JobResourceUploader.
@@ -380,50 +375,6 @@ public class TestJobResourceUploader {
     testErasureCodingSetting(false);
   }
 
-  @Test
-  public void testOriginalPathEndsInSlash()
-      throws IOException, URISyntaxException {
-    testOriginalPathWithTrailingSlash(
-        new Path(new URI("file:/local/mapred/test/")),
-        new Path("hdfs://localhost:1234/home/hadoop/test/"));
-  }
-
-  @Test
-  public void testOriginalPathIsRoot() throws IOException, URISyntaxException {
-    testOriginalPathWithTrailingSlash(
-        new Path(new URI("file:/")),
-        new Path("hdfs://localhost:1234/home/hadoop/"));
-  }
-
-  private void testOriginalPathWithTrailingSlash(Path path,
-      Path expectedRemotePath) throws IOException, URISyntaxException {
-    Path dstPath = new Path("hdfs://localhost:1234/home/hadoop/");
-    DistributedFileSystem fs = mock(DistributedFileSystem.class);
-    // make sure that FileUtils.copy() doesn't try to copy anything
-    when(fs.mkdirs(any(Path.class))).thenReturn(false);
-    when(fs.getUri()).thenReturn(dstPath.toUri());
-
-    JobResourceUploader uploader = new StubedUploader(fs, true, true);
-    JobConf jConf = new JobConf();
-    Path originalPath = spy(path);
-    FileSystem localFs = mock(FileSystem.class);
-    FileStatus fileStatus = mock(FileStatus.class);
-    when(localFs.getFileStatus(any(Path.class))).thenReturn(fileStatus);
-    when(fileStatus.isDirectory()).thenReturn(true);
-    when(fileStatus.getPath()).thenReturn(originalPath);
-
-    doReturn(localFs).when(originalPath)
-      .getFileSystem(any(Configuration.class));
-    when(localFs.getUri()).thenReturn(path.toUri());
-
-    uploader.copyRemoteFiles(dstPath,
-        originalPath, jConf, (short) 1);
-
-    ArgumentCaptor<Path> pathCaptor = ArgumentCaptor.forClass(Path.class);
-    verify(fs).makeQualified(pathCaptor.capture());
-    Assert.assertEquals("Path", expectedRemotePath, pathCaptor.getValue());
-  }
-
   private void testErasureCodingSetting(boolean defaultBehavior)
       throws IOException {
     JobConf jConf = new JobConf();
@@ -436,7 +387,7 @@ public class TestJobResourceUploader {
     DistributedFileSystem fs = mock(DistributedFileSystem.class);
     Path path = new Path("/");
     when(fs.makeQualified(any(Path.class))).thenReturn(path);
-    JobResourceUploader uploader = new StubedUploader(fs, true, false);
+    JobResourceUploader uploader = new StubedUploader(fs, true);
     Job job = Job.getInstance(jConf);
 
     uploader.uploadResources(job, new Path("/test"));
@@ -777,8 +728,6 @@ public class TestJobResourceUploader {
   }
 
   private class StubedUploader extends JobResourceUploader {
-    private boolean callOriginalCopy = false;
-
     StubedUploader(JobConf conf) throws IOException {
       this(conf, false);
     }
@@ -787,10 +736,8 @@ public class TestJobResourceUploader {
       super(FileSystem.getLocal(conf), useWildcard);
     }
 
-    StubedUploader(FileSystem fs, boolean useWildcard,
-        boolean callOriginalCopy) throws IOException {
+    StubedUploader(FileSystem fs, boolean useWildcard) throws IOException {
       super(fs, useWildcard);
-      this.callOriginalCopy = callOriginalCopy;
     }
 
     @Override
@@ -810,12 +757,7 @@ public class TestJobResourceUploader {
     @Override
     Path copyRemoteFiles(Path parentDir, Path originalPath, Configuration conf,
         short replication) throws IOException {
-      if (callOriginalCopy) {
-        return super.copyRemoteFiles(
-            parentDir, originalPath, conf, replication);
-      } else {
-        return new Path(destinationPathPrefix + originalPath.getName());
-      }
+      return new Path(destinationPathPrefix + originalPath.getName());
     }
 
     @Override

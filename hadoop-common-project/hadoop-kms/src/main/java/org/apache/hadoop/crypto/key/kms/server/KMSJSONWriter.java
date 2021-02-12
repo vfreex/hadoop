@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.crypto.key.kms.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.http.JettyUtils;
-import org.apache.hadoop.util.JsonSerialization;
 
 import javax.ws.rs.Produces;
 import javax.ws.rs.WebApplicationException;
@@ -66,7 +67,8 @@ public class KMSJSONWriter implements MessageBodyWriter<Object> {
       OutputStream outputStream) throws IOException, WebApplicationException {
     Writer writer = new OutputStreamWriter(outputStream, Charset
         .forName("UTF-8"));
-    JsonSerialization.writer().writeValue(writer, obj);
+    ObjectMapper jsonMapper = new ObjectMapper();
+    jsonMapper.writerWithDefaultPrettyPrinter().writeValue(writer, obj);
   }
 
 }

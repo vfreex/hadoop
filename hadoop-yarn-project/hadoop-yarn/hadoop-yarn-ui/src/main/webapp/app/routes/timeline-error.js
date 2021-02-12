@@ -19,9 +19,6 @@
 import Ember from 'ember';
 
 export default Ember.Route.extend({
-  model() {
-    return {};
-  },
   afterModel(model/*, transition*/) {
     model.error_id = "error";
     model.isValidErrorCode = false;

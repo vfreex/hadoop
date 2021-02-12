@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.protocol.ErasureCodingPolicy;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunk;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.AlignedStripe;
 import org.apache.hadoop.hdfs.util.StripedBlockUtil.StripingChunkReadResult;
@@ -105,10 +104,9 @@ abstract class StripeReader {
     }
   }
 
-  private final Map<Future<BlockReadStats>, Integer> futures =
-      new HashMap<>();
+  protected final Map<Future<Void>, Integer> futures = new HashMap<>();
   protected final AlignedStripe alignedStripe;
-  private final CompletionService<BlockReadStats> service;
+  protected final CompletionService<Void> service;
   protected final LocatedBlock[] targetBlocks;
   protected final CorruptedBlocks corruptedBlocks;
   protected final BlockReaderInfo[] readerInfos;
@@ -247,8 +245,6 @@ abstract class StripeReader {
       DFSClient.LOG.warn("Found Checksum error for "
           + currentBlock + " from " + currentNode
           + " at " + ce.getPos());
-      //Clear buffer to make next decode success
-      strategy.getReadBuffer().clear();
       // we want to remember which block replicas we have tried
       corruptedBlocks.addCorruptedBlock(currentBlock, currentNode);
       throw ce;
@@ -256,13 +252,11 @@ abstract class StripeReader {
       DFSClient.LOG.warn("Exception while reading from "
           + currentBlock + " of " + dfsStripedInputStream.getSrc() + " from "
           + currentNode, e);
-      //Clear buffer to make next decode success
-      strategy.getReadBuffer().clear();
       throw e;
     }
   }
 
-  private Callable<BlockReadStats> readCells(final BlockReader reader,
+  private Callable<Void> readCells(final BlockReader reader,
       final DatanodeInfo datanode, final long currentReaderOffset,
       final long targetReaderOffset, final ByteBufferStrategy[] strategies,
       final ExtendedBlock currentBlock) {
@@ -280,13 +274,10 @@ abstract class StripeReader {
             skipped == targetReaderOffset - currentReaderOffset);
       }
 
-      int ret = 0;
       for (ByteBufferStrategy strategy : strategies) {
-        int bytesReead = readToBuffer(reader, datanode, strategy, currentBlock);
-        ret += bytesReead;
+        readToBuffer(reader, datanode, strategy, currentBlock);
       }
-      return new BlockReadStats(ret, reader.isShortCircuit(),
-          reader.getNetworkDistance());
+      return null;
     };
   }
 
@@ -311,14 +302,13 @@ abstract class StripeReader {
     }
 
     chunk.state = StripingChunk.PENDING;
-    Callable<BlockReadStats> readCallable =
-        readCells(readerInfos[chunkIndex].reader,
+    Callable<Void> readCallable = readCells(readerInfos[chunkIndex].reader,
         readerInfos[chunkIndex].datanode,
         readerInfos[chunkIndex].blockReaderOffset,
         alignedStripe.getOffsetInBlock(), getReadStrategies(chunk),
         block.getBlock());
 
-    Future<BlockReadStats> request = service.submit(readCallable);
+    Future<Void> request = service.submit(readCallable);
     futures.put(request, chunkIndex);
     return true;
   }
@@ -351,7 +341,6 @@ abstract class StripeReader {
       try {
         StripingChunkReadResult r = StripedBlockUtil
             .getNextCompletedStripedRead(service, futures, 0);
-        dfsStripedInputStream.updateReadStats(r.getReadStats());
         if (DFSClient.LOG.isDebugEnabled()) {
           DFSClient.LOG.debug("Read task returned: " + r + ", for stripe "
               + alignedStripe);
@@ -463,7 +452,7 @@ abstract class StripeReader {
   }
 
   void clearFutures() {
-    for (Future future : futures.keySet()) {
+    for (Future<Void> future : futures.keySet()) {
       future.cancel(false);
     }
     futures.clear();

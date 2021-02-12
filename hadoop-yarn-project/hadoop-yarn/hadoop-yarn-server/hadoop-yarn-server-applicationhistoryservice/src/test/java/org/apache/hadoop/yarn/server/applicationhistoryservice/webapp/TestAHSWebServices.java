@@ -21,7 +21,6 @@ package org.apache.hadoop.yarn.server.applicationhistoryservice.webapp;
 import static org.apache.hadoop.yarn.webapp.WebServicesTestUtils.assertResponseStatusCode;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 
 import java.net.HttpURLConnection;
@@ -407,17 +406,12 @@ public class TestAHSWebServices extends JerseyTestBase {
     assertEquals("test app", app.get("name"));
     assertEquals(round == 0 ? "test diagnostics info" : "",
         app.get("diagnosticsInfo"));
-    assertEquals(Integer.MAX_VALUE + 1L, app.get("submittedTime"));
     assertEquals("test queue", app.get("queue"));
     assertEquals("user1", app.get("user"));
     assertEquals("test app type", app.get("type"));
     assertEquals(FinalApplicationStatus.UNDEFINED.toString(),
       app.get("finalAppStatus"));
     assertEquals(YarnApplicationState.FINISHED.toString(), app.get("appState"));
-    assertNotNull("Aggregate resource allocation is null",
-        app.get("aggregateResourceAllocation"));
-    assertNotNull("Aggregate Preempted Resource Allocation is null",
-        app.get("aggregatePreemptedResourceAllocation"));
   }
 
   @Test

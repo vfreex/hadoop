@@ -86,7 +86,7 @@ public abstract class AbstractContractDeleteTest extends
 
   @Test
   public void testDeleteNonEmptyDirRecursive() throws Throwable {
-    Path path = path("testDeleteNonEmptyDirRecursive");
+    Path path = path("testDeleteNonEmptyDirNonRecursive");
     mkdirs(path);
     Path file = new Path(path, "childfile");
     ContractTestUtils.writeTextFile(getFileSystem(), file, "goodbye, world",

@@ -208,9 +208,7 @@ public class TestMRApp {
   @Test
   public void testUpdatedNodes() throws Exception {
     int runCount = 0;
-    AsyncDispatcher dispatcher = new AsyncDispatcher();
-    dispatcher.init(new Configuration());
-    Dispatcher disp = Mockito.spy(dispatcher);
+    Dispatcher disp = Mockito.spy(new AsyncDispatcher());
     MRApp app = new MRAppWithHistory(2, 2, false, this.getClass().getName(),
         true, ++runCount, disp);
     Configuration conf = new Configuration();

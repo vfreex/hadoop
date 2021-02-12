@@ -577,9 +577,7 @@ public class MiniYARNCluster extends CompositeService {
       config.set(YarnConfiguration.NM_LOCALIZER_ADDRESS,
           MiniYARNCluster.getHostname() + ":0");
       config.set(YarnConfiguration.NM_COLLECTOR_SERVICE_ADDRESS,
-          MiniYARNCluster.getHostname() + ":" +
-              ServerSocketUtil.getPort(
-                  YarnConfiguration.DEFAULT_NM_COLLECTOR_SERVICE_PORT, 10));
+          MiniYARNCluster.getHostname() + ":0");
       WebAppUtils
           .setNMWebAppHostNameAndPort(config,
               MiniYARNCluster.getHostname(), 0);

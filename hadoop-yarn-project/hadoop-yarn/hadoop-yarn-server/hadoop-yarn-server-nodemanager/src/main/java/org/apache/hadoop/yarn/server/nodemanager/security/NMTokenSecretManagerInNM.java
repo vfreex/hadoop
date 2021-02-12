@@ -23,8 +23,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import org.apache.hadoop.yarn.server.nodemanager.recovery.RecoveryIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,14 +87,11 @@ public class NMTokenSecretManagerInNM extends BaseNMTokenSecretManager {
       super.serialNo = super.currentMasterKey.getMasterKey().getKeyId() + 1;
     }
 
-    try (RecoveryIterator<Map.Entry<ApplicationAttemptId, MasterKey>> it =
-             state.getIterator()) {
-      while (it.hasNext()) {
-        Map.Entry<ApplicationAttemptId, MasterKey> entry = it.next();
-        key = entry.getValue();
-        oldMasterKeys.put(entry.getKey(),
-            new MasterKeyData(key, createSecretKey(key.getBytes().array())));
-      }
+    for (Map.Entry<ApplicationAttemptId, MasterKey> entry :
+         state.getApplicationMasterKeys().entrySet()) {
+      key = entry.getValue();
+      oldMasterKeys.put(entry.getKey(),
+          new MasterKeyData(key, createSecretKey(key.getBytes().array())));
     }
 
     // reconstruct app to app attempts map

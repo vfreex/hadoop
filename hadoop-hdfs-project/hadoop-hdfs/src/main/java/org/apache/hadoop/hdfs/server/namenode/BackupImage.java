@@ -218,12 +218,7 @@ public class BackupImage extends FSImage {
       }
       lastAppliedTxId = logLoader.getLastAppliedTxId();
 
-      getNamesystem().writeLock();
-      try {
-        getNamesystem().dir.updateCountForQuota();
-      } finally {
-        getNamesystem().writeUnlock();
-      }
+      getNamesystem().dir.updateCountForQuota();
     } finally {
       backupInputStream.clear();
     }

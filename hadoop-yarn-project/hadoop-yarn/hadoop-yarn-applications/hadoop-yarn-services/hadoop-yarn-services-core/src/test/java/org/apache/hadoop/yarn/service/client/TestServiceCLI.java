@@ -166,7 +166,7 @@ public class TestServiceCLI {
     checkApp(serviceName, "master", 1L, 1000L, "qname");
   }
 
-  @Test
+  @Test (timeout = 180000)
   public void testInitiateServiceUpgrade() throws Exception {
     String[] args = {"app", "-upgrade", "app-1",
         "-initiate", ExampleAppJson.resourceName(ExampleAppJson.APP_JSON),
@@ -185,7 +185,7 @@ public class TestServiceCLI {
     Assert.assertEquals(result, 0);
   }
 
-  @Test
+  @Test (timeout = 180000)
   public void testUpgradeInstances() throws Exception {
     conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
         DummyServiceClient.class.getName());
@@ -197,7 +197,7 @@ public class TestServiceCLI {
     Assert.assertEquals(result, 0);
   }
 
-  @Test
+  @Test (timeout = 180000)
   public void testUpgradeComponents() throws Exception {
     conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
         DummyServiceClient.class.getName());
@@ -205,29 +205,6 @@ public class TestServiceCLI {
     String[] args = {"app", "-upgrade", "app-1",
         "-components", "comp1,comp2",
         "-appTypes", DUMMY_APP_TYPE};
-    int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
-  }
-
-  @Test
-  public void testGetInstances() throws Exception {
-    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
-        DummyServiceClient.class.getName());
-    cli.setConf(conf);
-    String[] args = {"container", "-list", "app-1",
-        "-components", "comp1,comp2",
-        "-appTypes", DUMMY_APP_TYPE};
-    int result = cli.run(ApplicationCLI.preProcessArgs(args));
-    Assert.assertEquals(result, 0);
-  }
-
-  @Test
-  public void testCancelUpgrade() throws Exception {
-    conf.set(YARN_APP_ADMIN_CLIENT_PREFIX + DUMMY_APP_TYPE,
-        DummyServiceClient.class.getName());
-    cli.setConf(conf);
-    String[] args = {"app", "-upgrade", "app-1",
-        "-cancel", "-appTypes", DUMMY_APP_TYPE};
     int result = cli.run(ApplicationCLI.preProcessArgs(args));
     Assert.assertEquals(result, 0);
   }
@@ -334,19 +311,6 @@ public class TestServiceCLI {
     @Override
     public int actionUpgradeComponents(String appName, List<String> components)
         throws IOException, YarnException {
-      return 0;
-    }
-
-    @Override
-    public String getInstances(String appName, List<String> components,
-        String version, List<String> containerStates)
-        throws IOException, YarnException {
-      return "";
-    }
-
-    @Override
-    public int actionCancelUpgrade(String appName) throws IOException,
-        YarnException {
       return 0;
     }
   }

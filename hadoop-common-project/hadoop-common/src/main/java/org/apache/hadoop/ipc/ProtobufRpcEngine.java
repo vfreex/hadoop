@@ -86,7 +86,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy
       ) throws IOException {
     return getProxy(protocol, clientVersion, addr, ticket, conf, factory,
-      rpcTimeout, connectionRetryPolicy, null, null);
+      rpcTimeout, connectionRetryPolicy, null);
   }
 
   @Override
@@ -94,12 +94,10 @@ public class ProtobufRpcEngine implements RpcEngine {
   public <T> ProtocolProxy<T> getProxy(Class<T> protocol, long clientVersion,
       InetSocketAddress addr, UserGroupInformation ticket, Configuration conf,
       SocketFactory factory, int rpcTimeout, RetryPolicy connectionRetryPolicy,
-      AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
-      throws IOException {
+      AtomicBoolean fallbackToSimpleAuth) throws IOException {
 
     final Invoker invoker = new Invoker(protocol, addr, ticket, conf, factory,
-        rpcTimeout, connectionRetryPolicy, fallbackToSimpleAuth,
-        alignmentContext);
+        rpcTimeout, connectionRetryPolicy, fallbackToSimpleAuth);
     return new ProtocolProxy<T>(protocol, (T) Proxy.newProxyInstance(
         protocol.getClassLoader(), new Class[]{protocol}, invoker), false);
   }
@@ -124,18 +122,15 @@ public class ProtobufRpcEngine implements RpcEngine {
     private final long clientProtocolVersion;
     private final String protocolName;
     private AtomicBoolean fallbackToSimpleAuth;
-    private AlignmentContext alignmentContext;
 
     private Invoker(Class<?> protocol, InetSocketAddress addr,
         UserGroupInformation ticket, Configuration conf, SocketFactory factory,
         int rpcTimeout, RetryPolicy connectionRetryPolicy,
-        AtomicBoolean fallbackToSimpleAuth, AlignmentContext alignmentContext)
-        throws IOException {
+        AtomicBoolean fallbackToSimpleAuth) throws IOException {
       this(protocol, Client.ConnectionId.getConnectionId(
           addr, protocol, ticket, rpcTimeout, connectionRetryPolicy, conf),
           conf, factory);
       this.fallbackToSimpleAuth = fallbackToSimpleAuth;
-      this.alignmentContext = alignmentContext;
     }
     
     /**
@@ -232,7 +227,7 @@ public class ProtobufRpcEngine implements RpcEngine {
       try {
         val = (RpcWritable.Buffer) client.call(RPC.RpcKind.RPC_PROTOCOL_BUFFER,
             new RpcProtobufRequest(rpcRequestHeader, theRequest), remoteId,
-            fallbackToSimpleAuth, alignmentContext);
+            fallbackToSimpleAuth);
 
       } catch (Throwable e) {
         if (LOG.isTraceEnabled()) {
@@ -342,11 +337,11 @@ public class ProtobufRpcEngine implements RpcEngine {
       String bindAddress, int port, int numHandlers, int numReaders,
       int queueSizePerHandler, boolean verbose, Configuration conf,
       SecretManager<? extends TokenIdentifier> secretManager,
-      String portRangeConfig, AlignmentContext alignmentContext)
+      String portRangeConfig)
       throws IOException {
     return new Server(protocol, protocolImpl, conf, bindAddress, port,
         numHandlers, numReaders, queueSizePerHandler, verbose, secretManager,
-        portRangeConfig, alignmentContext);
+        portRangeConfig);
   }
   
   public static class Server extends RPC.Server {
@@ -415,18 +410,17 @@ public class ProtobufRpcEngine implements RpcEngine {
      * @param numHandlers the number of method handler threads to run
      * @param verbose whether each call should be logged
      * @param portRangeConfig A config parameter that can be used to restrict
-     * @param alignmentContext provides server state info on client responses
+     * the range of ports used when port is 0 (an ephemeral port)
      */
     public Server(Class<?> protocolClass, Object protocolImpl,
         Configuration conf, String bindAddress, int port, int numHandlers,
         int numReaders, int queueSizePerHandler, boolean verbose,
         SecretManager<? extends TokenIdentifier> secretManager, 
-        String portRangeConfig, AlignmentContext alignmentContext)
+        String portRangeConfig)
         throws IOException {
       super(bindAddress, port, null, numHandlers,
           numReaders, queueSizePerHandler, conf, classNameBase(protocolImpl
               .getClass().getName()), secretManager, portRangeConfig);
-      setAlignmentContext(alignmentContext);
       this.verbose = verbose;  
       registerProtocolAndImpl(RPC.RpcKind.RPC_PROTOCOL_BUFFER, protocolClass,
           protocolImpl);
@@ -519,29 +513,46 @@ public class ProtobufRpcEngine implements RpcEngine {
         Message param = request.getValue(prototype);
 
         Message result;
-        Call currentCall = Server.getCurCall().get();
+        long startTime = Time.now();
+        int qTime = (int) (startTime - receiveTime);
+        Exception exception = null;
+        boolean isDeferred = false;
         try {
           server.rpcDetailedMetrics.init(protocolImpl.protocolClass);
           currentCallInfo.set(new CallInfo(server, methodName));
-          currentCall.setDetailedMetricsName(methodName);
           result = service.callBlockingMethod(methodDescriptor, null, param);
           // Check if this needs to be a deferred response,
           // by checking the ThreadLocal callback being set
           if (currentCallback.get() != null) {
-            currentCall.deferResponse();
+            Server.getCurCall().get().deferResponse();
+            isDeferred = true;
             currentCallback.set(null);
             return null;
           }
         } catch (ServiceException e) {
-          Exception exception = (Exception) e.getCause();
-          currentCall.setDetailedMetricsName(
-              exception.getClass().getSimpleName());
+          exception = (Exception) e.getCause();
           throw (Exception) e.getCause();
         } catch (Exception e) {
-          currentCall.setDetailedMetricsName(e.getClass().getSimpleName());
+          exception = e;
           throw e;
         } finally {
           currentCallInfo.set(null);
+          int processingTime = (int) (Time.now() - startTime);
+          if (LOG.isDebugEnabled()) {
+            String msg =
+                "Served: " + methodName + (isDeferred ? ", deferred" : "") +
+                    ", queueTime= " + qTime +
+                    " procesingTime= " + processingTime;
+            if (exception != null) {
+              msg += " exception= " + exception.getClass().getSimpleName();
+            }
+            LOG.debug(msg);
+          }
+          String detailedMetricsName = (exception == null) ?
+              methodName :
+              exception.getClass().getSimpleName();
+          server.updateMetrics(detailedMetricsName, qTime, processingTime,
+              isDeferred);
         }
         return RpcWritable.wrap(result);
       }

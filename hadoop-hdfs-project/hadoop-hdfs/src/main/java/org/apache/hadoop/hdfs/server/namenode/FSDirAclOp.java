@@ -153,11 +153,12 @@ class FSDirAclOp {
       if (iip.isDotSnapshotDir() && fsd.getINode4DotSnapshot(iip) != null) {
         return new AclStatus.Builder().owner("").group("").build();
       }
-      INodeAttributes inodeAttrs = fsd.getAttributes(iip);
-      List<AclEntry> acl = AclStorage.readINodeAcl(inodeAttrs);
-      FsPermission fsPermission = inodeAttrs.getFsPermission();
+      INode inode = FSDirectory.resolveLastINode(iip);
+      int snapshotId = iip.getPathSnapshotId();
+      List<AclEntry> acl = AclStorage.readINodeAcl(fsd.getAttributes(iip));
+      FsPermission fsPermission = inode.getFsPermission(snapshotId);
       return new AclStatus.Builder()
-          .owner(inodeAttrs.getUserName()).group(inodeAttrs.getGroupName())
+          .owner(inode.getUserName()).group(inode.getGroupName())
           .stickyBit(fsPermission.getStickyBit())
           .setPermission(fsPermission)
           .addEntries(acl).build();

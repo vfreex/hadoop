@@ -100,6 +100,8 @@ public class DefaultSpeculator extends AbstractService implements
   private AppContext context;
   private Thread speculationBackgroundThread = null;
   private volatile boolean stopped = false;
+  private BlockingQueue<SpeculatorEvent> eventQueue
+      = new LinkedBlockingQueue<SpeculatorEvent>();
   private TaskRuntimeEstimator estimator;
 
   private BlockingQueue<Object> scanControl = new LinkedBlockingQueue<Object>();
@@ -245,7 +247,7 @@ public class DefaultSpeculator extends AbstractService implements
   // This section is not part of the Speculator interface; it's used only for
   //  testing
   public boolean eventQueueEmpty() {
-    return scanControl.isEmpty();
+    return eventQueue.isEmpty();
   }
 
   // This interface is intended to be used only for test cases.
@@ -416,8 +418,7 @@ public class DefaultSpeculator extends AbstractService implements
           if (estimatedRunTime == data.getEstimatedRunTime()
               && progress == data.getProgress()) {
             // Previous stats are same as same stats
-            if (data.notHeartbeatedInAWhile(now)
-                || estimator.hasStagnatedProgress(runningTaskAttemptID, now)) {
+            if (data.notHeartbeatedInAWhile(now)) {
               // Stats have stagnated for a while, simulate heart-beat.
               TaskAttemptStatus taskAttemptStatus = new TaskAttemptStatus();
               taskAttemptStatus.id = runningTaskAttemptID;

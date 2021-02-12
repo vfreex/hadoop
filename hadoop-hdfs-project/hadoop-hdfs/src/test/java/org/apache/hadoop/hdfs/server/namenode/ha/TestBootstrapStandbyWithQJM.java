@@ -54,19 +54,14 @@ public class TestBootstrapStandbyWithQJM {
   private MiniJournalCluster jCluster;
   private int nnCount = 3;
 
-  protected Configuration createConfig() {
+  @Before
+  public void setup() throws Exception {
     Configuration conf = new Configuration();
     // Turn off IPC client caching, so that the suite can handle
     // the restart of the daemons between test cases.
     conf.setInt(
         CommonConfigurationKeysPublic.IPC_CLIENT_CONNECTION_MAXIDLETIME_KEY,
         0);
-    return conf;
-  }
-
-  @Before
-  public void setup() throws Exception {
-    Configuration conf = createConfig();
 
     MiniQJMHACluster miniQjmHaCluster =
         new MiniQJMHACluster.Builder(conf).setNumNameNodes(nnCount).build();

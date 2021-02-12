@@ -45,12 +45,4 @@ public class BlockPlacementStatusDefault implements BlockPlacementStatus {
         " more rack(s). Total number of racks in the cluster: " + totalRacks;
   }
 
-  @Override
-  public int getAdditionalReplicasRequired() {
-    if (isPlacementPolicySatisfied()) {
-      return 0;
-    } else {
-      return requiredRacks - currentRacks;
-    }
-  }
 }

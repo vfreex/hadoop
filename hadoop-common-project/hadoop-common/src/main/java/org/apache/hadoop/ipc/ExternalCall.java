@@ -24,7 +24,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.ipc.Server.Call;
-import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.RpcResponseHeaderProto.RpcStatusProto;
 import org.apache.hadoop.security.UserGroupInformation;
 
 public abstract class ExternalCall<T> extends Call {
@@ -35,11 +34,6 @@ public abstract class ExternalCall<T> extends Call {
 
   public ExternalCall(PrivilegedExceptionAction<T> action) {
     this.action = action;
-  }
-
-  @Override
-  public String getDetailedMetricsName() {
-    return "(external)";
   }
 
   public abstract UserGroupInformation getRemoteUser();
@@ -84,7 +78,7 @@ public abstract class ExternalCall<T> extends Call {
   }
 
   @Override
-  final void doResponse(Throwable t, RpcStatusProto status) {
+  final void doResponse(Throwable t) {
     synchronized(done) {
       error = t;
       done.set(true);

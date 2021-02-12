@@ -477,17 +477,14 @@ public class AppSchedulingInfo {
   }
 
   public PendingAsk getNextPendingAsk() {
-    readLock.lock();
     try {
-      if (!schedulerKeys.isEmpty()) {
-        SchedulerRequestKey firstRequestKey = schedulerKeys.first();
-        return getPendingAsk(firstRequestKey, ResourceRequest.ANY);
-      } else {
-        return null;
-      }
+      readLock.lock();
+      SchedulerRequestKey firstRequestKey = schedulerKeys.first();
+      return getPendingAsk(firstRequestKey, ResourceRequest.ANY);
     } finally {
       readLock.unlock();
     }
+
   }
 
   public PendingAsk getPendingAsk(SchedulerRequestKey schedulerKey) {

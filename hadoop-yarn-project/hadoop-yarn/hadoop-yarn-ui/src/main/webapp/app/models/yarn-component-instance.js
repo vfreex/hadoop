@@ -47,12 +47,5 @@ export default DS.Model.extend({
       return Converter.timeStampToDate(timestamp);
     }
     return 'N/A';
-  }),
-
-  containerLogURL: Ember.computed('containerId', function() {
-    const containerId = this.get('containerId');
-    const attemptId = Converter.containerIdToAttemptId(containerId);
-    const appId = Converter.attemptIdToAppId(attemptId);
-    return `#/yarn-app/${appId}/logs?attempt=${attemptId}&containerid=${containerId}`;
   })
 });

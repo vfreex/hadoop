@@ -24,7 +24,6 @@ import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtilClient;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.hdfs.server.protocol.BlockECReconstructionCommand.BlockECReconstructionInfo;
-import org.apache.hadoop.hdfs.util.StripedBlockUtil.BlockReadStats;
 import org.apache.hadoop.util.Daemon;
 import org.slf4j.Logger;
 
@@ -162,7 +161,7 @@ public final class ErasureCodingWorker {
     return conf;
   }
 
-  CompletionService<BlockReadStats> createReadService() {
+  CompletionService<Void> createReadService() {
     return new ExecutorCompletionService<>(stripedReadPool);
   }
 
