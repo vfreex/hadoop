@@ -1,10 +1,10 @@
 approvers:
-- timflannagan1
+- timflannagan
 - bparees
 - bentito
 - EmilyM1
 reviewers:
-- timflannagan1
+- timflannagan
 - EmilyM1
 - bentito
 component: "Metering Operator"
