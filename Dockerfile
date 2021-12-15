@@ -68,6 +68,7 @@ RUN set -x; yum install --setopt=skip_missing_names_on_install=False -y \
         net-tools \
         bind-utils \
         which \
+	zip \
         jq \
         rsync \
         openssl \
@@ -105,6 +106,10 @@ RUN rm -rf ${HADOOP_HOME}/share/doc \
     && rm -rf ${HADOOP_HOME}/share/hadoop/mapreduce/lib-examples \
     && rm -rf ${HADOOP_HOME}/share/hadoop/yarn/test \
     && find ${HADOOP_HOME}/share/hadoop -name *test*.jar | xargs rm -rf
+
+# remove JMSAppender class from built jars
+RUN zip -d share/hadoop/common/lib/log4j-1.2.17.jar org/apache/log4j/net/JMSAppender.class
+RUN zip -d share/hadoop/hdfs/lib/log4j-1.2.17.jar org/apache/log4j/net/JMSAppender.class
 
 RUN ln -s $HADOOP_HOME/etc/hadoop $HADOOP_CONF_DIR
 RUN mkdir -p $HADOOP_LOG_DIR
